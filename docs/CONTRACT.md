@@ -97,6 +97,8 @@ interface StepRow {                              // строка журнала 
   energy_before_wh: number; energy_after_wh: number; soc_after_pct: number;
   temp_before_c: number; temp_after_c: number; calibration_age_steps: number;
   completed_job: string | null; planner_note?: string;
+  solar_w: number; heater_w: number; load_w: number;   // из trace модели
+  below_reserve: boolean; brownout: boolean;
 }
 
 interface Explanation {                          // «Почему?» по заданию или аппарату/шагу
