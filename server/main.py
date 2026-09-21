@@ -6,13 +6,15 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import Body, FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from api import ai
+from server import ai
 from core import service
 from core.errors import InputError, NotFound
 
@@ -204,3 +206,20 @@ def ai_event(body: Draft):
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ интерфейс
+# Собранный web/dist: ассеты — со CDN (Vercel продвигает mount), остальные пути — index.html
+# (маршрутизация на стороне браузера). Локально без сборки этот блок не активен.
+WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
+if (WEB_DIST / "index.html").exists():
+    app.mount("/assets", StaticFiles(directory=WEB_DIST / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(404, "Неизвестный адрес API")
+        file = (WEB_DIST / path).resolve()
+        if path and file.is_file() and WEB_DIST in file.parents:
+            return FileResponse(file)
+        return FileResponse(WEB_DIST / "index.html")

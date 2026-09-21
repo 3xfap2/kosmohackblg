@@ -20,7 +20,7 @@
 | `core/` | **Codex** | Сценарии, запуски, планировщики, события, анализ потерь, сравнение. Без импортов FastAPI/веба. |
 | `tests/` | **Codex** | pytest. |
 | `experiments/`, `results/`, `scripts/` | **Codex** | Генератор выгрузок (одна команда, фиксированный seed), сверка чисел. `results/` коммитится — это артефакт сдачи. |
-| `api/` | Claude | FastAPI поверх `core/service.py`. |
+| `server/` | Claude | FastAPI поверх `core/service.py` (Vercel Function). |
 | `web/` | Claude | React + Vite + TS. Только отображение, никаких расчётов. |
 | `docs/`, `README.md`, `CRITERIA.md`, презентация, деплой | Claude | Допущения планировщика в `docs/ASSUMPTIONS.md` правит Codex. |
 

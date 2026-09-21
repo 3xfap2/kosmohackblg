@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from api.main import app
+from server.main import app
 
 
 def test_api_contract_and_invalid_json():

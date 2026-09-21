@@ -1,0 +1,8 @@
+[project]
+name = "sozvezdie"
+version = "1.0.0"
+description = "Автономное управление спутниковой группировкой — веб-сервис оператора"
+requires-python = ">=3.12"
+
+[tool.vercel]
+entrypoint = "server.main:app"

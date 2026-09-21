@@ -13,7 +13,7 @@ model/        расчётная модель организаторов (без
 data/         сценарии P01–P04 (без изменений)
 examples/     пример сообщений events_demo.json
 core/         ядро: сценарии, запуски, планировщики, события, анализ потерь
-api/          FastAPI поверх core
+server/       FastAPI поверх core (Vercel Function), URL — /api/…
 web/          интерфейс (React + Vite + TypeScript)
 experiments/  генератор results/
 docs/         контракт, дизайн, журнал передачи

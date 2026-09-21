@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm --prefix web ci && npm --prefix web run build",
+  "functions": {
+    "server/main.py": {
+      "maxDuration": 300,
+      "includeFiles": "{data,model,core,examples,web/dist}/**"
+    }
+  }
+}
