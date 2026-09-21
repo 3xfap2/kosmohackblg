@@ -126,7 +126,7 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
   };
 
   const k = Math.min(step, last);
-  // Ожидание по фактам журнала: заряд ниже резерва → работать нельзя; в тени → копит заряд; иначе — без задачи.
+  // Ожидание по фактам журнала: заряд ниже резерва → работать нельзя; в тени → генерации нет, ждёт выхода на свет; иначе — без задачи.
   const idleKind = (sid: string, kk: number): "low" | "dark" | "wait" => {
     const c = byStep[kk]?.[sid];
     if (c && c.soc < 30) return "low";
@@ -404,7 +404,7 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
           <li><i style={{ background: COLOR.relay, boxShadow: `0 0 8px ${COLOR.relay}66` }} /><Term k="relay">ретранслирует</Term><b className="mono">{counts.relay}</b></li>
           <li><i style={{ background: COLOR.calibrate, boxShadow: `0 0 8px ${COLOR.calibrate}66` }} /><Term k="calibration">калибруется</Term><b className="mono">{counts.calibrate}</b></li>
           <li className="sub-head"><i style={{ background: COLOR.idle }} />ждут<b className="mono">{counts.idle}</b></li>
-          <li className="sub"><Term k="shadow">в тени, копят заряд</Term><b className="mono">{counts.idleDark}</b></li>
+          <li className="sub"><Term k="shadow">в тени, без генерации</Term><b className="mono">{counts.idleDark}</b></li>
           <li className="sub">без задачи на этом шаге<b className="mono">{counts.wait}</b></li>
           <li className="sub"><Term k="reserve">заряд ниже резерва</Term><b className="mono">{counts.low}</b></li>
           <li><i style={{ background: COLOR.down }} />недоступны<b className="mono">{counts.down}</b></li>
