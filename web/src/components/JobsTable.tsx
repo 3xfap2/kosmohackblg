@@ -53,9 +53,9 @@ export default function JobsTable({ jobs, onPick, picked }: {
                 <td className="mono muted">{(j.executors.length ? j.executors : j.eligible_satellites).join(" ")}</td>
                 <td>
                   <span className="dot" style={{ background: DOT[j.status] }} />{STATUS[j.status]}
-                  {j.loss && (
+                  {j.loss ? (
                     <span className={"loss " + j.loss.group}>{GROUP[j.loss.group]}: {LOSS[j.loss.code] ?? j.loss.code}</span>
-                  )}
+                  ) : j.status === "missed" && <span className="loss">причина не установлена — доказательств недостаточно</span>}
                 </td>
               </tr>
             ))}
