@@ -10,6 +10,7 @@ from uuid import uuid4
 from model.operations import RESULT_SCHEMA, Session, digest, replay_episode
 from model.resource_env import load, validate
 from .errors import InputError, NotFound
+from .messages import model_error
 from .planner import make_planner
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,7 +54,7 @@ def _source(source):
             s["meta"]["title"] += " — изменённый вариант"
         validate(s)
     except (ValueError, TypeError, KeyError, OverflowError) as exc:
-        raise InputError(f"Некорректный сценарий: {exc}") from exc
+        raise InputError(f"Некорректный сценарий: {model_error(exc)}") from exc
     return s
 
 
@@ -137,7 +138,7 @@ def _restore(record):
         session.run_metadata = copy.deepcopy(meta)
         return session, planner
     except (ValueError, TypeError, KeyError, OverflowError, AttributeError) as exc:
-        raise InputError(f"Некорректная запись запуска: {exc}") from exc
+        raise InputError(f"Некорректная запись запуска: {model_error(exc)}") from exc
 
 
 def _pack(record, session, planner):
@@ -172,7 +173,7 @@ def apply_event(record, event):
     try:
         session.apply_event(event)
     except (ValueError, KeyError, TypeError) as exc:
-        message = f"Сообщение отклонено: {exc}"
+        message = f"Сообщение отклонено: {model_error(exc)}"
         result["rejected_events"].append({"received_at_step": session.env.k,
             "payload": copy.deepcopy(event), "error": message})
         return result, message
@@ -316,4 +317,4 @@ def replay(result):
             diff["trace"] = "Журнал не совпадает"
         return {"match": not diff, "summary": actual, "diff": diff}
     except (ValueError, KeyError, TypeError, OverflowError) as exc:
-        raise InputError(f"Не удалось воспроизвести расчёт: {exc}") from exc
+        raise InputError(f"Не удалось воспроизвести расчёт: {model_error(exc)}") from exc

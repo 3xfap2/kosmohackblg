@@ -2,6 +2,7 @@
 from collections import defaultdict
 from model.operations import replay_episode
 from .errors import InputError, NotFound
+from .messages import REASONS, action_text, planner_note
 
 
 def impossibility(s, job):
@@ -116,10 +117,23 @@ def explanation(session, notes, job_id, satellite_id, step):
     for j in prefix.env.jobs.values():
         if j["release_step"] <= step < j["deadline_step"] and j["remaining_steps"] > 0 and satellite_id in j["eligible_satellites"]:
             ok, reason, _ = prefix.env.can_execute(satellite_id, {"action": "job", "job_id": j["id"]})
-            barriers["допустимо" if ok else reason] += 1
-    return {"subject": {"satellite_id": satellite_id, "step": step},
+            barriers["допустимо" if ok else REASONS.get(reason, "ограничение модели")] += 1
+    result = {"subject": {"satellite_id": satellite_id, "step": step},
         "known_at_decision": [f"Заряд {row['energy_before_wh']} Вт·ч, температура {row['temp_before_c']} °C",
             f"Получено сообщений: {len(prefix.events)}; проверка открытых заданий: {dict(barriers)}"],
         "constraint": row["reason"] if row["reason"] not in ("accepted", "idle") else None,
-        "consequence": f"Запрошено {row['requested']}; исполнено {row['executed']}. "
-                       f"Пояснение планировщика: {notes.get(step, {}).get(satellite_id, 'нет записи; причина простоя не доказана')}."}
+        "consequence": f"Запрошено: {action_text(row['requested'])}; "
+                       f"исполнено: {action_text({**row['requested'], 'action': row['executed']})}. "
+                       f"Пояснение планировщика: {planner_note(notes.get(step, {}).get(satellite_id))}."}
+    if not prefix.env.available(satellite_id):
+        failures = [f for f in prefix.env.s["failures"] if f["satellite_id"] == satellite_id
+                    and f["start_step"] <= step < f["end_step"]]
+        end = max(f["end_step"] for f in failures)
+        minutes = end * prefix.env.s["time"]["step_s"] // 60
+        events = [e["id"] for e in prefix.events if e["type"] == "satellite_outage"
+                  and satellite_id in e["satellite_ids"] and e["at_step"] <= step < e["end_step"]]
+        source = "по сообщениям " + ", ".join(events) if events else "по исходному сценарию"
+        proof = f"Аппарат недоступен {source} до {minutes // 60:02d}:{minutes % 60:02d} (шаг {end})."
+        result.update(constraint="satellite_unavailable", consequence=proof,
+                      loss={"group": "problem_limit", "code": "satellite_unavailable", "proof": proof})
+    return result

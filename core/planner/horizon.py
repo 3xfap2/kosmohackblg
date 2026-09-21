@@ -9,7 +9,7 @@
 Ограничения повторяют правила модели: одно действие на аппарат, один исполнитель
 задания на шаге, не более downlink_parallel_limit передач на Землю, резерв заряда
 в начале и в конце операции, действующая калибровка. Энергия описана неравенством
-e[t+1] <= e[t] + ΔE(действие). Прогноз по ожиданию приближённый;
+e[t+1] <= e[t] + ΔE(действие). Прогноз по плану эвристики приближённый;
 гарантии нижней границы энергии нет: нагрев меняет работу зарядки (A5).
 
 Цель «priority» фиксированным большим весом ставит завершение приоритета 3 выше
@@ -36,8 +36,8 @@ MILLS = 1000         # единица целевой функции — 0,001 д
 
 class HorizonPlanner(Planner):
     name = "horizon-cpsat"
-    version = "1.3"
-    defaults = {"horizon": 48, "replan_every": 6, "deterministic_limit": 0.05, "workers": 1,
+    version = "1.4"
+    defaults = {"horizon": 48, "replan_every": 6, "deterministic_limit": 0.5, "workers": 1,
                 "energy_value_usd_per_wh": 0.5, "seed": 7}
 
     def __init__(self, goal: str = "priority", **params):
@@ -146,7 +146,12 @@ class HorizonPlanner(Planner):
 
         def hinted(sid: str, t: int) -> dict:
             return baseline_plan.get(t, {}).get(sid) or {"action": "idle"}
-        fc = {sid: forecast(s, sid, k0, k1, env.state[sid]["temp_c"]) for sid in env.sats}
+        def hinted_kind(sid, t):
+            action = hinted(sid, t)
+            return env.jobs[action["job_id"]]["kind"] if action["action"] == "job" else action["action"]
+
+        fc = {sid: forecast(s, sid, k0, k1, env.state[sid]["temp_c"],
+                           {t: hinted_kind(sid, t) for t in steps}) for sid in env.sats}
         avail = {sid: [available(sid, t) for t in steps] for sid in env.sats}
 
         # --- задания
