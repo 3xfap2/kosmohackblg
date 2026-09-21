@@ -47,6 +47,7 @@ export const api = {
     req<Explanation>("/api/runs/explain", { run, ...p }),
   compare: (a: RunRecord, b: RunRecord) => req<Comparison>("/api/compare", { a, b }),
   export: (run: RunRecord, include_trace = false) => req<unknown>("/api/runs/export", { run, include_trace }),
+  demo: () => req<RunResponse>("/api/demo", {}),
   aiStatus: () => req<{ enabled: boolean; model: string | null }>("/api/ai/status"),
   ask: (run: RunRecord, question: string) =>
     req<{ answer: string; source: "ai" | "template" | "template_after_check" }>("/api/ai/ask", { run, question }),

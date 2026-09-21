@@ -1,27 +1,35 @@
-/* Токены — docs/DESIGN.md (Resend, адаптация «Созвездие»). */
+/* Токены — docs/DESIGN.md (Resend: чёрный холст, тонкие линии, фиолетовый — только идентификаторы,
+   цвет — только у данных). */
 :root {
   --bg: #000000;
-  --surface: #0b0e14;
-  --line: #292d30;
+  --surface: #0a0c10;
+  --line: #24272b;
+  --line-strong: #3a3f44;
   --text-strong: #ffffff;
-  --text: #f0f0f0;
-  --text-muted: #a1a4a5;
-  --text-faint: #6e727a;
+  --text: #ececec;
+  --text-muted: #9a9ea3;
+  --text-faint: #5e6268;
   --id: #9281f7;
-  --action: #3b9eff;
 
+  /* статусы данных — чуть приглушены, чтобы не «кричали» на чёрном */
   --ok: #3ad389;
-  --info: #70b8ff;
-  --relay: #baa7ff;
-  --warn: #ffca16;
-  --bad: #ff9592;
+  --info: #6cb6ff;
+  --relay: #b4a4ff;
+  --warn: #f5c451;
+  --bad: #ff8a85;
+  --action: #6cb6ff;
 
   --font-sans: "Inter", system-ui, sans-serif;
   --font-display: "Inter Tight", "Inter", sans-serif;
   --font-serif: "Playfair Display", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --r-sm: 6px;
+  --r-sm: 8px;
   --r-lg: 16px;
   --page: 1200px;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 150ms;
+  --t-med: 260ms;
 }

@@ -203,6 +203,30 @@ def ai_event(body: Draft):
     return call(ai.draft_event, body.run, body.text)
 
 
+DEMO_EVENTS = Path(__file__).resolve().parent.parent / "examples" / "events_demo.json"
+
+
+@app.post("/api/demo")
+def demo():
+    """Демо-смена: P02 и открытый пример сообщений организаторов, по шагам их поступления.
+
+    Здесь только порядок вызовов ядра: создать запуск, дойти до шага сообщения, передать его.
+    Алгоритм — эвристика по цели (расчёт за секунды, чтобы демо открывалось сразу).
+    """
+    import json
+    events = json.loads(DEMO_EVENTS.read_text(encoding="utf-8"))["events"]
+    run = call(service.create_run, {"ref": "P02_shift"}, "priority", "goal-greedy", None)
+    for event in events:
+        while run["steps_executed"] < event["at_step"]:
+            run = call(service.advance, run, event["at_step"], BUDGET_S)
+        run, error = call(service.apply_event, run, event)
+        if error:
+            raise HTTPException(500, f"Демо-сообщение {event['id']} отклонено: {error}")
+    while run["steps_executed"] < 288:
+        run = call(service.advance, run, 288, BUDGET_S)
+    return with_view(run)
+
+
 @app.get("/api/health")
 def health():
     return {"ok": True}

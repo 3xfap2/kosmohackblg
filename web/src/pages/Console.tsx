@@ -1,28 +1,28 @@
-import { Link, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
+import { NavLink, Route, Routes } from "react-router-dom";
 import Compare from "./Compare";
-import Demo from "./Demo";
+import DemoBoot from "./DemoBoot";
 import LiveRun from "./LiveRun";
 import Setup from "./Setup";
 import "./console.css";
 
 export default function Console() {
-  const [params] = useSearchParams();
-  const legacyDemo = params.get("demo");
+  const link = ({ isActive }: { isActive: boolean }) => (isActive ? "on" : "");
   return (
     <div className="console">
       <header className="bar">
-        <Link to="/" className="brand">Созвездие</Link>
+        <NavLink to="/" className="brand"><i className="brand-dot" />Созвездие</NavLink>
         <nav className="bar-nav">
-          <Link to="/console">Смены</Link>
-          <Link to="/console/compare">Сравнение</Link>
-          <Link to="/console/demo/edf-baseline">Демо</Link>
+          <NavLink to="/console" end className={link}>Демо-смена</NavLink>
+          <NavLink to="/console/new" className={link}>Новая смена</NavLink>
+          <NavLink to="/console/compare" className={link}>Сравнение</NavLink>
         </nav>
       </header>
       <Routes>
-        <Route index element={legacyDemo ? <Navigate to={`demo/${legacyDemo}?${params}`} replace /> : <Setup />} />
+        <Route index element={<DemoBoot />} />
+        <Route path="demo" element={<DemoBoot fresh />} />
+        <Route path="new" element={<Setup />} />
         <Route path="run/:id" element={<LiveRun />} />
         <Route path="compare" element={<Compare />} />
-        <Route path="demo/:alg" element={<Demo />} />
       </Routes>
     </div>
   );

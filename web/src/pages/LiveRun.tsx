@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api } from "../api/client";
 import { store } from "../api/store";
 import type { Algorithm, Goal, JobView, RunRecord, RunView, Timeline } from "../api/types";
-import AskPanel from "../components/AskPanel";
+import ChatWidget from "../components/ChatWidget";
 import EventComposer from "../components/EventComposer";
 import RunDashboard from "../components/RunDashboard";
 import { fromTimeline } from "../lib/cells";
@@ -136,7 +136,6 @@ export default function LiveRun() {
           usedIds={[...view.events.map((e) => e.id)]} onSend={sendEvent} />
       )}
     </section>
-    {k > 0 && <AskPanel run={run} />}
   </>);
 
   return (
@@ -151,6 +150,7 @@ export default function LiveRun() {
         <div className="bar-step mono">шаг {k}/{total} · {clock(k)}{done ? " · смена завершена" : ""}</div>
       </div>
       <RunDashboard view={view} jobs={jobs} board={board} explain={explain} side={side} />
+      {k > 0 && <ChatWidget run={run} />}
     </>
   );
 }

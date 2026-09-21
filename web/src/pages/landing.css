@@ -1,18 +1,42 @@
 .landing { max-width: var(--page); margin: 0 auto; padding: 0 24px 64px; }
-.nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
-.nav nav { display: flex; gap: 24px; font-size: 14px; }
-.nav nav a:hover { color: var(--text-strong); }
-.brand { font: 500 18px var(--font-display); color: var(--text-strong); letter-spacing: -0.02em; }
-.hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center; min-height: 72vh; }
-.hero h1 { font: 400 clamp(40px, 6vw, 80px)/1 var(--font-serif); letter-spacing: -0.01em; color: var(--text-strong); margin: 16px 0 24px; }
-.eyebrow { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.lead { font-size: 18px; max-width: 34em; margin-bottom: 32px; }
-.hero-art { aspect-ratio: 1; }
-.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 96px 0; }
-.grid3 h3 { font: 500 20px var(--font-display); color: var(--text-strong); margin: 0 0 8px; }
-.proof p { margin: 4px 0; font-size: 14px; }
-footer { margin-top: 96px; font-size: 14px; }
-@media (max-width: 800px) {
+.nav { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+.nav nav { display: flex; gap: 6px; font-size: 14px; }
+.nav nav a { padding: 7px 12px; border-radius: 8px; color: var(--text-muted); transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.nav nav a:hover { color: var(--text-strong); background: rgba(255,255,255,0.04); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 500 17px var(--font-display); letter-spacing: -0.02em; color: var(--text-strong); }
+.brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-strong); box-shadow: 0 0 0 3px rgba(255,255,255,0.08), 0 0 14px rgba(146,129,247,0.7); }
+
+.hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 40px; align-items: center; min-height: calc(92vh - 72px); }
+.hero h1 { font: 400 clamp(40px, 5.2vw, 72px)/1.02 var(--font-serif); letter-spacing: -0.015em; color: var(--text-strong); margin: 18px 0 22px; }
+.hero h1 em { font-style: italic; color: #cfd3ff; }
+.eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 10px; }
+.live { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(58,211,137,0.6); animation: live 2.4s infinite; }
+@keyframes live { 0% { box-shadow: 0 0 0 0 rgba(58,211,137,0.55); } 70% { box-shadow: 0 0 0 7px rgba(58,211,137,0); } 100% { box-shadow: 0 0 0 0 rgba(58,211,137,0); } }
+.lead { font-size: 17px; line-height: 1.6; color: var(--text-muted); max-width: 32em; margin: 0 0 34px; }
+.cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-lg { height: 46px; padding: 0 22px; font-size: 14.5px; border-radius: 10px; }
+.hero-art { aspect-ratio: 1; position: relative; }
+.hero-art::before { content: ""; position: absolute; inset: 18%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(146,129,247,0.16), transparent 70%); filter: blur(20px); }
+
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 40px 0 96px; }
+.feature { padding: 28px; transition: border-color var(--t-fast) var(--ease), transform var(--t-med) var(--ease-out); }
+.feature:hover { border-color: var(--line-strong); transform: translateY(-3px); }
+.feature-n { font-size: 11px; color: var(--text-faint); }
+.feature h3 { font: 500 20px var(--font-display); letter-spacing: -0.015em; color: var(--text-strong); margin: 14px 0 8px; }
+.feature p { margin: 0; font-size: 14.5px; }
+
+.terminal { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: #050607; }
+.terminal-bar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.terminal-bar i { width: 10px; height: 10px; border-radius: 50%; background: #2a2d31; }
+.terminal-bar span { margin-left: 10px; font-size: 11.5px; color: var(--text-faint); }
+.terminal pre { margin: 0; padding: 20px; font-size: 13.5px; line-height: 1.8; white-space: pre-wrap; }
+.terminal .ok { color: var(--ok); }
+footer { margin-top: 96px; font-size: 13px; }
+
+@media (max-width: 860px) {
   .hero, .grid3 { grid-template-columns: 1fr; }
+  .hero { min-height: auto; padding: 32px 0; }
   .nav nav { display: none; }
 }

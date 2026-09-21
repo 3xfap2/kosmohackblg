@@ -23,9 +23,10 @@ export default function Setup() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api.scenarios().then(setScenarios).catch((e) => setError(`Сервер недоступен: ${e.message}`));
+    api.scenarios().then((list) => { setScenarios(list); if (list.some((x) => x.id === "P02_shift")) pick({ ref: "P02_shift" }); })
+      .catch((e) => setError(`Сервер недоступен: ${e.message}`));
     store.all().then((r) => setRuns(r.sort((a, b) => a.id.localeCompare(b.id))));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const overrides = (): Overrides | undefined => {
     const o: Overrides = {};
@@ -62,18 +63,20 @@ export default function Setup() {
       {error && <p className="error">{error}</p>}
 
       <section className="card">
-        <h2>1. Сценарий</h2>
+        <h2><span className="step-no">01</span>Сценарий</h2>
         <div className="scenario-list">
           {scenarios?.map((s) => (
-            <button key={s.id} className={"scenario" + (source && "ref" in source && source.ref === s.id ? " on" : "")}
+            <button key={s.id} className={"scenario spot" + (source && "ref" in source && source.ref === s.id ? " on" : "")}
               onClick={() => pick({ ref: s.id })}>
-              <span className="id">{s.id}</span>
-              <span>{s.title}</span>
-              <span className="muted mono small">{s.satellites} ап. · {s.steps} шагов ({clock(s.steps)}) · {s.jobs} заданий</span>
+              <span className="id small">{s.id}</span>
+              <span className="scenario-title">{s.title}</span>
+              <span className="scenario-meta">
+                <span>{s.satellites} аппаратов</span><span>{clock(s.steps)}</span><span>{s.jobs} заданий</span>
+              </span>
             </button>
           ))}
-          <label className="scenario upload">
-            <span>Загрузить свой сценарий (JSON)</span>
+          <label className="scenario upload spot">
+            <span className="scenario-title">+ Свой сценарий</span>
             <span className="muted small">формат cosmo-B-ops-1.0, проверяется моделью</span>
             <input type="file" accept=".json,application/json" hidden onChange={async (e) => {
               const f = e.target.files?.[0]; if (!f) return;
@@ -83,14 +86,14 @@ export default function Setup() {
         </div>
         {info && (
           <p className="mono small">
-            <span className="ok-text">✓</span> {info.title}: {info.satellites} аппаратов, {info.steps} шагов, {info.jobs} заданий
-            (P3 — {info.jobs_by_priority["3"]}, downlink — {info.jobs_by_kind.downlink}); доказуемо невыполнимых: {info.provably_infeasible_jobs}
+            <span className="ok-text">✓</span> проверено моделью: {info.steps} шагов, {info.jobs} заданий (P3 — {info.jobs_by_priority["3"]},
+            на Землю — {info.jobs_by_kind.downlink}); доказуемо невыполнимых: {info.provably_infeasible_jobs}
           </p>
         )}
       </section>
 
       <section className="card">
-        <h2>2. Условия эксперимента <span className="muted small">— необязательно, создаёт отдельный сценарий</span></h2>
+        <h2><span className="step-no">02</span>Условия эксперимента <span className="muted small">— необязательно, создаёт отдельный сценарий</span></h2>
         <div className="form-row">
           <label className="field">Солнечная мощность, множитель
             <input className="input mono" placeholder="1.0" value={solar} onChange={(e) => setSolar(e.target.value)} /></label>
@@ -111,10 +114,10 @@ export default function Setup() {
       </section>
 
       <section className="card">
-        <h2>3. Цель и алгоритм</h2>
+        <h2><span className="step-no">03</span>Цель и алгоритм</h2>
         <div className="form-row">
           {(["priority", "revenue"] as Goal[]).map((g) => (
-            <button key={g} className={"choice" + (goal === g ? " on" : "")} onClick={() => setGoal(g)}>
+            <button key={g} className={"choice spot" + (goal === g ? " on" : "")} onClick={() => setGoal(g)}>
               <b>{GOAL[g]}</b>
               <span className="muted small">{g === "priority" ? "Сначала задания приоритета 3 в срок, затем выручка" : "Максимум выручки; приоритет 3 показывается отдельно"}</span>
             </button>
@@ -122,18 +125,19 @@ export default function Setup() {
         </div>
         <div className="form-row">
           {(["horizon-cpsat", "goal-greedy", "edf-baseline"] as Algorithm[]).map((a) => (
-            <button key={a} className={"choice" + (algorithm === a ? " on" : "")} onClick={() => setAlgorithm(a)}>
+            <button key={a} className={"choice spot" + (algorithm === a ? " on" : "")} onClick={() => setAlgorithm(a)}>
+              {a === "horizon-cpsat" && <span className="badge">основной</span>}
               <b>{ALGO[a]}</b>
               <span className="muted small">{a === "horizon-cpsat" ? "Основной: эвристика, которую CP-SAT улучшает на 4 часа вперёд с учётом заряда и тени" : a === "goal-greedy" ? "Быстрая: порядок по цели, отсечка безнадёжных, калибровка заранее" : "Простое правило для сравнения: ближайший срок"}</span>
             </button>
           ))}
         </div>
-        <button className="btn btn-primary" disabled={!info || busy} onClick={create}>{busy ? "Создание…" : "Создать смену"}</button>
+        <button className="btn btn-primary" disabled={!info || busy} onClick={create}>{busy ? "Создание…" : <>Создать смену <span className="arrow">→</span></>}</button>
       </section>
 
       <section className="card">
         <h2>Мои смены <span className="muted small">— хранятся в этом браузере</span></h2>
-        {runs.length === 0 && <p className="muted small">Пока нет. Или посмотрите <Link to="/console/demo/edf-baseline" className="id">демо-прогон</Link>.</p>}
+        {runs.length === 0 && <p className="muted small">Пока нет. Или откройте <Link to="/console" className="id">демо-смену</Link>.</p>}
         <ul className="run-list">
           {runs.map((r) => (
             <li key={r.id}>

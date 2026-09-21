@@ -2,20 +2,99 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
-body { font: 400 16px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; }
+body { font: 400 15px/1.55 var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 a { color: inherit; text-decoration: none; }
-code, .mono { font-family: var(--font-mono); }
+::selection { background: rgba(146, 129, 247, 0.35); }
+code, .mono { font-family: var(--font-mono); font-feature-settings: "zero" 1; }
 .id { font-family: var(--font-mono); color: var(--id); }
-
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 16px; border: 1px solid var(--line); border-radius: var(--r-sm);
-  background: transparent; color: var(--text-strong); font: 500 14px/1 var(--font-sans);
-  cursor: pointer; transition: border-color 150ms ease-out;
-}
-.btn:hover { border-color: var(--text-strong); }
-.btn:disabled { color: var(--text-faint); cursor: not-allowed; }
-.btn-primary { background: var(--action); border-color: var(--action); color: #000; }
-.card { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; }
+.id.big { font-size: 18px; }
 .muted { color: var(--text-muted); }
+.small { font-size: 13px; }
+.tiny { font-size: 11px; }
 .error { color: var(--bad); font-family: var(--font-mono); font-size: 13px; }
+.ok-text { color: var(--ok); font-size: 13px; }
+.warn-text { color: var(--warn); }
+
+/* ---------- Кнопки: белая основная, «призрак» для остальных ---------- */
+.btn {
+  --lift: 0px;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 38px; padding: 0 16px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  color: var(--text-strong); font: 500 13.5px/1 var(--font-sans); letter-spacing: -0.005em;
+  cursor: pointer; white-space: nowrap; transform: translateY(var(--lift));
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.btn:hover:not(:disabled) { --lift: -1px; border-color: #4a4f55; background-color: rgba(255,255,255,0.04); }
+.btn:active:not(:disabled) { --lift: 0px; transform: translateY(0) scale(0.98); }
+.btn:focus-visible, .chip:focus-visible, .choice:focus-visible, .scenario:focus-visible, .icon-btn:focus-visible {
+  outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px rgba(146,129,247,0.6);
+}
+.btn:disabled { color: var(--text-faint); cursor: not-allowed; background: transparent; }
+
+.btn-primary { background: var(--text-strong); color: #000; border-color: var(--text-strong); box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset; }
+.btn-primary:hover:not(:disabled) {
+  background: #fff; border-color: #fff; color: #000;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.06), 0 8px 24px -8px rgba(255,255,255,0.35);
+}
+.btn-primary:disabled { background: #2a2d31; border-color: #2a2d31; color: #6e727a; }
+.btn .arrow { transition: transform var(--t-fast) var(--ease); }
+.btn:hover .arrow { transform: translateX(3px); }
+
+.icon-btn {
+  width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 8px;
+  border: 1px solid var(--line); background: rgba(0,0,0,0.6); color: var(--text); font: 500 15px/1 var(--font-sans);
+  cursor: pointer; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.icon-btn:hover:not(:disabled) { border-color: #4a4f55; background: rgba(255,255,255,0.06); }
+.icon-btn:active:not(:disabled) { transform: scale(0.94); }
+.icon-btn:disabled { color: var(--text-faint); cursor: default; }
+
+/* ---------- Чипы ---------- */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid var(--line); background: transparent; color: var(--text-muted); font: 500 12px/1 var(--font-sans);
+  cursor: pointer; transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+}
+.chip:hover:not(:disabled) { color: var(--text-strong); border-color: #4a4f55; }
+.chip.on { color: var(--bg); background: var(--text-strong); border-color: var(--text-strong); }
+.chip.on .muted { color: #55595e; }
+.chip:disabled { opacity: 0.4; cursor: default; }
+
+/* ---------- Карточки ---------- */
+.card {
+  position: relative; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0) 40%), var(--bg);
+}
+
+/* Подсветка вслед за курсором — только у выбираемых карточек (.spot). */
+.spot { position: relative; isolation: isolate; }
+.spot::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(146,129,247,0.14), transparent 60%);
+  opacity: 0; transition: opacity var(--t-med) var(--ease);
+}
+.spot:hover::before { opacity: 1; }
+
+/* ---------- Поля ---------- */
+.input, .select {
+  background: #050607; color: var(--text); border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 9px 11px; font-size: 14px; width: 100%;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.input::placeholder { color: #4d5157; }
+.input:hover, .select:hover { border-color: #3a3f44; }
+.input:focus, .select:focus { outline: none; border-color: var(--id); box-shadow: 0 0 0 3px rgba(146,129,247,0.18); }
+
+/* ---------- Появление ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.rise { animation: rise 520ms var(--ease-out) both; }
+.rise-1 { animation-delay: 60ms; } .rise-2 { animation-delay: 120ms; } .rise-3 { animation-delay: 180ms; }
+.rise-4 { animation-delay: 240ms; } .rise-5 { animation-delay: 300ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
+}
