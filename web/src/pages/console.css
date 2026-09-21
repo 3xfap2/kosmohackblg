@@ -299,3 +299,29 @@ textarea.input { resize: vertical; font-size: 12.5px; }
 .modal footer { border-top: 1px solid var(--line); justify-content: flex-end; }
 .report { flex: 1; overflow: auto; margin: 0; padding: 18px; font: 13px/1.6 var(--font-mono); color: var(--text); white-space: pre-wrap; }
 .sat-card { max-height: calc(100% - 92px); overflow: auto; }
+
+/* ---------- Загрузка смены ---------- */
+.run-skeleton { padding-top: 22px; animation: fade 240ms var(--ease) both; }
+.loader { display: grid; justify-items: center; gap: 6px; padding: 40px 0 34px; text-align: center; }
+.loader-orbits { position: relative; width: 96px; height: 96px; }
+.loader-orbits b { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #6f9bd6, #16294a); box-shadow: 0 0 18px rgba(108,182,255,0.45); }
+.loader-orbits span { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255,255,255,0.07); animation: orbit 2.4s linear infinite; }
+.loader-orbits span i { position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; }
+.loader-orbits .o1 { inset: 30px; animation-duration: 1.4s; } .loader-orbits .o1 i { background: var(--info); box-shadow: 0 0 10px var(--info); }
+.loader-orbits .o2 { inset: 16px; animation-duration: 2.2s; animation-direction: reverse; } .loader-orbits .o2 i { background: var(--relay); box-shadow: 0 0 10px var(--relay); }
+.loader-orbits .o3 { inset: 0; animation-duration: 3.4s; } .loader-orbits .o3 i { background: var(--warn); box-shadow: 0 0 10px var(--warn); }
+@keyframes orbit { to { transform: rotate(360deg); } }
+.loader-title { font: 700 17px var(--font-display); color: var(--text-strong); margin: 16px 0 0; }
+.dots i { font-style: normal; animation: blink 1.2s infinite; }
+.dots i:nth-child(2) { animation-delay: 0.2s; } .dots i:nth-child(3) { animation-delay: 0.4s; }
+
+.sk { border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(90deg, #070809 0%, #111317 50%, #070809 100%);
+  background-size: 200% 100%; animation: shimmer 1.4s linear infinite, rise 500ms var(--ease-out) both; }
+.sk-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.sk-kpis .sk { height: 92px; }
+.sk-layout { display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 16px; margin-top: 16px; }
+.sk-main { height: 520px; }
+.sk-side { display: flex; flex-direction: column; gap: 16px; }
+.sk-side .sk:first-child { height: 300px; } .sk-side .sk:last-child { height: 204px; }
+@media (max-width: 1100px) { .sk-kpis { grid-template-columns: repeat(3, 1fr); } .sk-layout { grid-template-columns: 1fr; } .sk-side { display: none; } }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { store } from "../api/store";
+import RunSkeleton from "../components/RunSkeleton";
 
 // Первое, что видит человек в консоли: готовая смена P02 с сообщениями организаторов.
 // Демо — обычный живой запуск: в нём работают ветви, сравнение, сообщения и чат.
@@ -32,13 +33,9 @@ export default function DemoBoot({ fresh = false }: { fresh?: boolean }) {
   }, [fresh, nav]);
 
   return (
-    <div className="boot">
+    <div>
       {error ? <p className="error">Не удалось подготовить демо: {error}</p> : (
-        <>
-          <div className="boot-orbit" aria-hidden><span /><span /><span /></div>
-          <p className="boot-title">Готовим демо-смену</p>
-          <p className="muted small">P02 · 48 аппаратов · сутки · 4 сообщения во время смены</p>
-        </>
+        <RunSkeleton title="Готовим демо-смену" note="P02 · 48 аппаратов · сутки · сообщения организаторов" />
       )}
     </div>
   );

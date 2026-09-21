@@ -9,6 +9,7 @@ import ReportModal from "../features/ReportModal";
 import Research from "../features/Research";
 import EventComposer from "../components/EventComposer";
 import RunDashboard from "../components/RunDashboard";
+import RunSkeleton from "../components/RunSkeleton";
 import { fromTimeline } from "../lib/cells";
 import { ALGO, GOAL, clock } from "../format";
 
@@ -103,7 +104,7 @@ export default function LiveRun() {
   const passport = useCallback((sid: string) => api.f.passport(run!, sid), [run]);
 
   if (error && !view) return <p className="error">{error}</p>;
-  if (!run || !view || !board) return <p className="muted">Загрузка смены…</p>;
+  if (!run || !view || !board) return <RunSkeleton />;
   const total = view.steps_total, k = run.steps_executed, done = k >= total;
 
   const side = (<>
