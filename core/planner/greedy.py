@@ -13,6 +13,10 @@
 4. Калибровка заранее: аппарат без задания на шаге калибруется, если до истечения
    срока калибровки осталось не больше `early_calibration` шагов. Так калибровка
    не отнимает шаг в момент, когда у аппарата есть работа.
+5. Только для расширенной модели (`core/extended.py`, по умолчанию выключено):
+   `attitude_aware` — исполнитель с наибольшим зарядом за вычетом цены ориентации
+   (потеря генерации на свету + разворот); `link_guard` — если на шаге никто не передаёт
+   на Землю, а контакт есть, один аппарат держит служебный сеанс связи.
 Будущие шаги не рассматриваются — это делает CP-SAT в `horizon.py`.
 """
 from __future__ import annotations
@@ -23,7 +27,7 @@ from .base import Admission, Planner
 class GoalGreedyPlanner(Planner):
     name = "goal-greedy"
     version = "1.0"
-    defaults = {"early_calibration": 8, "p3_bonus_usd": 0}
+    defaults = {"early_calibration": 8, "p3_bonus_usd": 0, "attitude_aware": False, "link_guard": False}
 
     def __init__(self, goal="priority", **params):
         unknown = set(params) - set(self.defaults)
@@ -35,6 +39,9 @@ class GoalGreedyPlanner(Planner):
         bonus = settings["p3_bonus_usd"]
         if isinstance(bonus, bool) or not isinstance(bonus, (int, float)) or bonus < 0 or bonus != bonus or bonus == float("inf"):
             raise ValueError("p3_bonus_usd: требуется конечное неотрицательное число")
+        for flag in ("attitude_aware", "link_guard"):
+            if type(settings[flag]) is not bool:
+                raise ValueError(f"{flag}: требуется true или false")
         super().__init__(goal, **settings)
 
     @staticmethod
@@ -65,8 +72,8 @@ class GoalGreedyPlanner(Planner):
                     and j["deadline_step"] - k >= j["remaining_steps"]
                     and self._contact_steps(env, j, k) >= j["remaining_steps"]]
         for job in sorted(feasible, key=lambda j: self._key(j, k)):
-            by_charge = sorted(job["eligible_satellites"],
-                               key=lambda s: (-env.state[s]["energy_wh"] / env.sats[s]["capacity_wh"], s))
+            by_charge = sorted(job["eligible_satellites"], key=lambda s: (
+                -self._net_charge(env, s, {"action": "job", "job_id": job["id"]}), s))
             for sid in by_charge:
                 if sid not in adm.accepted and adm.add(sid, {"action": "job", "job_id": job["id"]})[0]:
                     notes[sid] = "goal_priority" if self.goal == "priority" else "goal_revenue"
@@ -77,5 +84,40 @@ class GoalGreedyPlanner(Planner):
                 if (sid not in adm.accepted and env.state[sid]["calibration_age_steps"] >= valid - early
                         and adm.add(sid, {"action": "calibrate"})[0]):
                     notes[sid] = "calibration_ahead"
+        if self.params["link_guard"] and not self._on_link(env, adm.accepted):
+            contact = [s for s in sorted(env.sats) if s not in adm.accepted
+                       and env.s["environment"][s]["downlink_available"][k]]
+            for sid in sorted(contact, key=lambda s: (-self._net_charge(env, s, {"action": "link"}), s)):
+                if adm.add(sid, {"action": "link"})[0]:
+                    notes[sid] = "link_guard"
+                    break
         self.last_notes = notes
         return adm.accepted
+
+    def metadata(self) -> dict:
+        # Флаги расширенной модели попадают в метаданные только включёнными: записи
+        # и results/ официальной модели остаются прежними.
+        meta = super().metadata()
+        for flag in ("attitude_aware", "link_guard"):
+            if not meta["parameters"][flag]:
+                del meta["parameters"][flag]
+        return meta
+
+    def _net_charge(self, env, sid, action) -> float:
+        """Доля заряда после вычета цены ориентации — главный ключ выбора исполнителя."""
+        return (env.state[sid]["energy_wh"] - self._attitude_cost(env, sid, action)) / env.sats[sid]["capacity_wh"]
+
+    def _attitude_cost(self, env, sid, action) -> float:
+        """Вт·ч на ориентацию: 0 вне расширенной модели или без attitude_aware."""
+        if not self.params["attitude_aware"] or not hasattr(env, "ext"):
+            return 0.0
+        from core.extended import mode_of
+        mode = mode_of(env, action)
+        solar = env.s["environment"][sid]["solar_w"][env.k]
+        lost = 0.0 if mode == "sun" else solar * (1 - env.ext["pointing_solar_factor"]) * env.s["time"]["step_s"] / 3600
+        return round(lost + (env.ext["slew_wh"] if mode != env.state[sid]["attitude"] else 0.0), 6)
+
+    @staticmethod
+    def _on_link(env, accepted) -> bool:
+        return any(a["action"] == "link" or (a["action"] == "job" and env.jobs[a["job_id"]]["kind"] == "downlink")
+                   for a in accepted.values())

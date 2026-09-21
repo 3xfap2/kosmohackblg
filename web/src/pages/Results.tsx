@@ -8,6 +8,7 @@ interface Row {
   key: string; scenario: string; algorithm: string; goal: "priority" | "revenue";
   p3_done: number; p3_due: number; jobs_done: number; jobs_total: number; revenue_usd: number;
   blocked: number; min_soc_pct: number; replay_match?: boolean; repeat_match?: boolean;
+  below_reserve: number; mean_terminal_soc_pct: number; missed_work_steps: number;
   solves: number; cpsat_selected: number; guard: number; fallback: number; seconds?: number | null;
 }
 const SCEN: Record<string, [string, string]> = {
@@ -83,6 +84,9 @@ export default function Results() {
                       <th>Выполнено заданий</th>
                       <th className={goal === "revenue" ? "hl" : ""}>Выручка</th>
                       <th><Term k="reserve">Мин. заряд</Term></th>
+                      <th>Ниже резерва, ап.-шагов</th>
+                      <th>Заряд в конце, средний</th>
+                      <th>Работа в сорванных, шагов</th>
                       <th>Отказов модели</th>
                       <th>Расчёт</th>
                       <th>Проверка</th>
@@ -101,6 +105,9 @@ export default function Results() {
                               {goal === "revenue" && d != null && <div className={"tiny " + (d > 0 ? "ok-text" : d < 0 ? "warn-text" : "muted")}>{signed(d, usd)} к правилу</div>}
                             </td>
                             <td className="mono">{r.min_soc_pct.toFixed(1)}%</td>
+                            <td className="mono">{r.below_reserve}</td>
+                            <td className="mono">{r.mean_terminal_soc_pct.toFixed(1)}%</td>
+                            <td className="mono">{r.missed_work_steps}</td>
                             <td className="mono">{r.blocked}</td>
                             <td className="mono">{sec(r.seconds)}</td>
                             <td className="mono">{r.replay_match ? <span className="ok-text">✓ повтор</span> : <span className="error">✗ повтор</span>}
@@ -132,6 +139,8 @@ export default function Results() {
             </section>
           )}
 
+          <ExtendedModel goal={goal} />
+
           {hybrid.length > 0 && (
             <section className="card">
               <div className="card-head"><h2>Как часто CP-SAT улучшает план эвристики</h2></div>
@@ -152,5 +161,66 @@ export default function Results() {
         </>
       )}
     </div>
+  );
+}
+
+// Расширенная модель (О7): ориентация, светотень, служебная связь — results/extended_summary.json.
+interface ExtRow {
+  critical_jobs_completed_on_time: number; critical_jobs_due: number; jobs_completed: number; revenue_usd: number;
+  blocked_command_count: number; below_reserve_satellite_steps: number; minimum_soc_pct: number; mean_terminal_soc_pct: number;
+  ext_slews: number; ext_solar_lost_wh: number; ext_link_coverage: number; ext_longest_link_gap_steps: number;
+  repeat_match: boolean; replay_match: boolean;
+}
+const VARIANT: Record<string, string> = {
+  "edf-baseline": "Простое правило",
+  "goal-greedy": "Эвристика (не знает об ориентации)",
+  "goal-greedy+attitude": "Эвристика + цена ориентации",
+  "goal-greedy+attitude+link": "Эвристика + ориентация + связь с Землёй",
+};
+
+function ExtendedModel({ goal }: { goal: "priority" | "revenue" }) {
+  const [d, setD] = useState<{ available: boolean; runs: Record<string, ExtRow>; compat: Record<string, boolean>; parameters: Record<string, number> } | null>(null);
+  useEffect(() => { fetch("/api/extended").then((r) => r.json()).then(setD).catch(() => setD(null)); }, []);
+  if (!d?.available) return null;
+  const compatOk = Object.values(d.compat).filter(Boolean).length;
+  return (
+    <section className="card" id="extended">
+      <div className="card-head"><h2>Расширенная модель: ориентация, светотень и связь</h2><span className="muted small mono">results/extended_summary.json</span></div>
+      <p className="muted small">В модели организаторов генерация зависит только от света и тени, а ориентация спутника не учитывается.
+        Мы добавили: панели отворачиваются от Солнца, когда спутник наводится на цель (генерация ×{d.parameters.pointing_solar_factor} на свету),
+        разворот между режимами стоит {d.parameters.slew_wh} Вт·ч, и служебный сеанс связи, чтобы держать канал с Землёй без задания.
+        Это наши допущения (A11–A13), не условия организаторов.</p>
+      <p className="small"><span className="ok-text">✓ {compatOk} из {Object.keys(d.compat).length}</span> сценариев: с нейтральными параметрами расширение даёт
+        те же команды и итог, что модель организаторов.</p>
+      {Object.keys(SCEN).filter((s) => Object.keys(d.runs).some((k) => k.startsWith(s))).map((s) => (
+        <div key={s} className="table-scroll ext-block">
+          <p className="small"><b>{SCEN[s][0]}</b> <span className="muted mono">· {s}</span></p>
+          <table className="table res-table">
+            <thead><tr><th>Вариант</th><th>Срочные в срок</th><th>Выручка</th><th>Ниже резерва, ап.-шагов</th><th>Заряд в конце</th>
+              <th><Term k="downlink">Связь с Землёй</Term>, доля шагов</th><th>Самый долгий разрыв связи</th><th>Разворотов</th><th>Проверка</th></tr></thead>
+            <tbody>
+              {Object.keys(VARIANT).map((v) => d.runs[`${s}__${v}__${goal}`] && [v, d.runs[`${s}__${v}__${goal}`]] as const).filter(Boolean).map((x) => {
+                const [v, r] = x as readonly [string, ExtRow];
+                return (
+                  <tr key={v} className={v === "edf-baseline" ? "base" : ""}>
+                    <td>{VARIANT[v]}</td>
+                    <td className="mono">{r.critical_jobs_completed_on_time} / {r.critical_jobs_due}</td>
+                    <td className="mono">{usd(r.revenue_usd)}</td>
+                    <td className="mono">{r.below_reserve_satellite_steps}</td>
+                    <td className="mono">{r.mean_terminal_soc_pct.toFixed(1)}%</td>
+                    <td className="mono">{(r.ext_link_coverage * 100).toFixed(1)}%</td>
+                    <td className="mono">{r.ext_longest_link_gap_steps * 5} мин</td>
+                    <td className="mono">{r.ext_slews}</td>
+                    <td className="mono">{r.replay_match && r.repeat_match ? <span className="ok-text">✓ повтор ✓ дважды</span> : <span className="error">✗</span>}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+      <p className="muted small">Вывод: удержание связи поднимает долю шагов со связью с Землёй, не отнимая срочных заданий в обычной смене.
+        Учёт цены ориентации при выборе исполнителя даёт небольшой и не всегда положительный эффект — это видно в таблице.</p>
+    </section>
   );
 }

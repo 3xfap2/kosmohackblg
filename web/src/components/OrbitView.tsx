@@ -147,7 +147,8 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
   const story = useMemo(() => {
     const items: { step: number; title: string; text: string; tone: "info" | "warn" }[] = [
       { step: 0, title: "Начало смены", tone: "info",
-        text: `${sats.length} спутников, задания на ${Math.round(steps * 5 / 60)} ч. Цвет точки — чем занят спутник; справа тень Земли, там нет солнечной энергии.` },
+        text: `${sats.length} спутников, задания на ${Math.round(steps * 5 / 60)} ч. Цвет точки — чем занят спутник; справа тень Земли, там нет солнечной энергии.`
+          + (board.executed === 0 ? " Смена ещё не рассчитана: нажмите «+1 час» или «До конца» в панели справа — планировщик поведёт её сам." : "") },
     ];
     for (const e of events) {
       if (e.type === "add_jobs") items.push({ step: e.at_step, tone: "warn", title: "Срочные задания",

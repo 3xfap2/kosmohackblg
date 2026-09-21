@@ -480,4 +480,5 @@ textarea.input { resize: vertical; font-size: 12.5px; }
   .loop li:not(:last-child)::after { content: none; }
   .duel-side { margin-left: 0; }
 }
-.res-table td:last-child, .res-table td .tiny, .res-table td:nth-child(7) { white-space: nowrap; }
+.res-table td:last-child, .res-table td .tiny { white-space: nowrap; }
+.ext-block { margin-top: 14px; }

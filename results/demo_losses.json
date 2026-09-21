@@ -1,0 +1,206 @@
+{
+  "run": "P02 + сообщения до шага 144, goal-greedy, priority",
+  "step": 144,
+  "missed_p3": 10,
+  "problem_limit": 9,
+  "planner_choice": 1,
+  "not_established": 0,
+  "jobs": [
+    {
+      "job_id": "JOB-0002",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        72,
+        89
+      ],
+      "work_steps": 1,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S01"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "planner_choice",
+      "code": "executor_busy",
+      "evidence": "На шаге 82 аппарат S01 выполнял URG-P-03 при наличии контакта для этого задания. Это конкуренция в журнале, не доказанная единственная причина потери."
+    },
+    {
+      "job_id": "JOB-0051",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        64,
+        89
+      ],
+      "work_steps": 1,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S08"
+      ],
+      "contact_steps_in_window": 0,
+      "outages_of_eligible": [
+        {
+          "satellite_id": "S08",
+          "start_step": 74,
+          "end_step": 90
+        }
+      ],
+      "group": "problem_limit",
+      "code": "no_contact_steps",
+      "evidence": "В окне [64, 89) доступно 0 шагов с контактом; требуется 1. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0080",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        65,
+        72
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S12"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [65, 72) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0126",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        125,
+        142
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S18"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [125, 142) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0138",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        26,
+        51
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S20"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [26, 51) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0182",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        42,
+        59
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S26"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [42, 59) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0230",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        35,
+        46
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S33"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [35, 46) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0238",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        54,
+        71
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S34"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [54, 71) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0253",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        83,
+        100
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S36"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [83, 100) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    },
+    {
+      "job_id": "JOB-0289",
+      "kind": "downlink",
+      "priority": 3,
+      "window_steps": [
+        83,
+        93
+      ],
+      "work_steps": 2,
+      "done_steps": 0,
+      "eligible_satellites": [
+        "S41"
+      ],
+      "contact_steps_in_window": 1,
+      "outages_of_eligible": [],
+      "group": "problem_limit",
+      "code": "insufficient_contact_steps",
+      "evidence": "В окне [83, 93) доступно 1 шагов с контактом; требуется 2. На шаге допустим только один исполнитель."
+    }
+  ]
+}

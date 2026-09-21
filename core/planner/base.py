@@ -66,6 +66,9 @@ class Admission:
                 return False, "duplicate_job_in_step"
             if job["kind"] == "downlink" and self.downlinks >= self.limit:
                 return False, "ground_capacity"
+        # Служебный сеанс связи расширенной модели (core/extended.py) занимает общий канал.
+        if ok and action["action"] == "link" and self.downlinks >= self.limit:
+            return False, "ground_capacity"
         return ok, reason
 
     def add(self, sid: str, action: dict) -> tuple[bool, str]:
@@ -76,6 +79,8 @@ class Admission:
                 job = self.env.jobs[action["job_id"]]
                 self.used_jobs.add(job["id"])
                 self.downlinks += job["kind"] == "downlink"
+            elif action["action"] == "link":
+                self.downlinks += 1
         return ok, reason
 
 

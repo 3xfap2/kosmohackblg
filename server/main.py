@@ -329,11 +329,25 @@ def results():
                     "p3_done": m["critical_jobs_completed_on_time"], "p3_due": m["critical_jobs_due"],
                     "jobs_done": m["jobs_completed"], "jobs_total": m["jobs_total"], "revenue_usd": m["revenue_usd"],
                     "blocked": m["blocked_command_count"], "min_soc_pct": m["minimum_soc_pct"],
+                    "below_reserve": m["below_reserve_satellite_steps"],
+                    "mean_terminal_soc_pct": round(sum(m["terminal_soc_pct"].values()) / len(m["terminal_soc_pct"]), 6),
+                    "missed_work_steps": m["work_steps_in_missed_jobs"],
                     "replay_match": r.get("replay_match"), "repeat_match": r.get("repeat_match"),
                     "solves": r["solves"], "cpsat_selected": r["cpsat_selected_solves"],
                     "guard": r["baseline_guard_solves"], "fallback": r["fallback_solves"],
                     "seconds": timings.get(key)})
     return {"available": True, "source": "results/summary.json", "runs": out}
+
+
+@app.get("/api/extended")
+def extended():
+    """Расширенная модель (ориентация, светотень, связь): results/extended_summary.json
+    от experiments/extended.py. Без расчёта — только чтение файла."""
+    import json
+    path = RESULTS.parent / "extended_summary.json"
+    if not path.exists():
+        return {"available": False}
+    return {"available": True, "source": "results/extended_summary.json", **json.loads(path.read_text(encoding="utf-8"))}
 
 
 DEMO_STOP = 144  # 12:00: два сообщения уже приняты, два следующих оператор отправляет сам
