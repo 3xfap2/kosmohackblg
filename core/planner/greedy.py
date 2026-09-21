@@ -8,6 +8,7 @@
    чем работы, или меньше шагов с контактом у допустимых исполнителей. Работа на них
    не приносит дохода и занимает аппарат (постановка: «начатые, но не завершённые
    задания занимают ресурсы»).
+   Параметр p3_bonus_usd добавляет к стоимости задания P3 надбавку в цели «revenue».
 3. Исполнитель — допустимый аппарат с наибольшим зарядом (в долях ёмкости).
 4. Калибровка заранее: аппарат без задания на шаге калибруется, если до истечения
    срока калибровки осталось не больше `early_calibration` шагов. Так калибровка
@@ -22,7 +23,7 @@ from .base import Admission, Planner
 class GoalGreedyPlanner(Planner):
     name = "goal-greedy"
     version = "1.0"
-    defaults = {"early_calibration": 8}
+    defaults = {"early_calibration": 8, "p3_bonus_usd": 0}
 
     def __init__(self, goal="priority", **params):
         unknown = set(params) - set(self.defaults)
@@ -31,6 +32,9 @@ class GoalGreedyPlanner(Planner):
         settings = {**self.defaults, **params}
         if type(settings["early_calibration"]) is not int or settings["early_calibration"] < 0:
             raise ValueError("early_calibration: требуется целое неотрицательное число")
+        bonus = settings["p3_bonus_usd"]
+        if isinstance(bonus, bool) or not isinstance(bonus, (int, float)) or bonus < 0 or bonus != bonus or bonus == float("inf"):
+            raise ValueError("p3_bonus_usd: требуется конечное неотрицательное число")
         super().__init__(goal, **settings)
 
     @staticmethod
@@ -43,7 +47,9 @@ class GoalGreedyPlanner(Planner):
         slack = (job["deadline_step"] - k) - job["remaining_steps"]
         if self.goal == "priority":
             return (-job["priority"], slack, -job["value_usd"], job["id"])
-        return (-job["value_usd"] / job["remaining_steps"], slack, job["id"])
+        # «revenue»: стоимость на шаг работы; надбавка за P3 (по умолчанию 0) строит компромисс для F6.
+        bonus = self.params["p3_bonus_usd"] if job["priority"] == 3 else 0
+        return (-(job["value_usd"] + bonus) / job["remaining_steps"], slack, job["id"])
 
     def decide(self, session) -> dict[str, dict]:
         env = session.env

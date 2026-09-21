@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from server import ai
-from core import service
+from core import features, service
 from core.errors import InputError, NotFound
 
 # Запас до лимита Vercel Hobby (300 с на запрос): остаток доделывает следующий вызов клиента.
@@ -201,6 +201,69 @@ def ai_ask(body: Ask):
 @app.post("/api/ai/event")
 def ai_event(body: Draft):
     return call(ai.draft_event, body.run, body.text)
+
+
+# ------------------------------------------------------------------ функции О7 (docs/PROPOSAL_O7.md)
+class Impact(RunOnly):
+    event: Any
+    horizon: int = Field(48, ge=6, le=96)
+
+
+class JobQuery(RunOnly):
+    job_id: str
+
+
+class SatQuery(RunOnly):
+    satellite_id: str
+
+
+class Stress(RunOnly):
+    runs: int = Field(12, ge=1, le=30)
+
+
+@app.post("/api/features/impact")
+def f_impact(body: Impact):
+    return call(features.event_impact, body.run, body.event, body.horizon)
+
+
+@app.post("/api/features/forecast")
+def f_forecast(body: RunOnly):
+    return call(features.forecast, body.run)
+
+
+@app.post("/api/features/why-not")
+def f_why_not(body: JobQuery):
+    return call(features.why_not, body.run, body.job_id)
+
+
+@app.post("/api/features/what-if")
+def f_what_if(body: RunOnly):
+    return call(features.what_if, body.run)
+
+
+@app.post("/api/features/frontier")
+def f_frontier(body: RunOnly):
+    return call(features.frontier, body.run)
+
+
+@app.post("/api/features/stress")
+def f_stress(body: Stress):
+    return call(features.stress_test, body.run, body.runs)
+
+
+@app.post("/api/features/link")
+def f_link(body: RunOnly):
+    return call(features.link_continuity, body.run)
+
+
+@app.post("/api/features/passport")
+def f_passport(body: SatQuery):
+    return call(features.passport, body.run, body.satellite_id)
+
+
+@app.post("/api/features/report")
+def f_report(body: RunOnly):
+    return call(features.shift_report, body.run)
 
 
 DEMO_EVENTS = Path(__file__).resolve().parent.parent / "examples" / "events_demo.json"
