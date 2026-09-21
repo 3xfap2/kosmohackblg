@@ -19,7 +19,7 @@ def test_impact_three_branches_from_same_state(run):
     assert run == before
     assert r["from_step"] == 24 and r["until_step"] == 48
     assert set(r) >= {"without_event", "replanned", "old_plan", "saved_by_replanning", "cost_of_event"}
-    with pytest.raises(InputError):
+    with pytest.raises(InputError, match="текущем незавершённом шаге"):
         F.event_impact(run, {"id": "T-2", "at_step": 3, "type": "satellite_outage", "satellite_ids": ["S01"], "end_step": 9})
 
 

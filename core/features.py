@@ -16,6 +16,7 @@ import statistics
 from model.operations import Session
 from .analysis import impossibility, job_views
 from .errors import InputError
+from .messages import model_error
 from .planner import make_planner
 from .planner.base import Admission
 from .service import _restore, _source
@@ -93,7 +94,7 @@ def event_impact(record, event, horizon=48):
     try:
         replanned.apply_event(copy.deepcopy(event))
     except (ValueError, KeyError, TypeError) as exc:
-        raise InputError(f"Сообщение не будет принято моделью: {exc}") from exc
+        raise InputError(f"Сообщение не будет принято моделью: {model_error(exc)}") from exc
     frozen = _clone(replanned)
     _run(replanned, copy.deepcopy(planner), until)
     _run(frozen, None, until, forced=lambda s: old_plan.get(s.env.k, {}))
