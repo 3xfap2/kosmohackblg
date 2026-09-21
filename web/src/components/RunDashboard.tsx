@@ -10,13 +10,14 @@ import OrbitView from "./OrbitView";
 import SocChart from "./SocChart";
 
 // Общая панель смены: одинаково для демо и живого запуска. Все числа — из RunView ядра.
-export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side, after, whyNot, passport, onIntervene, interveneStep, shareUrl }: {
+export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side, after, whyNot, passport, onIntervene, interveneStep, shareUrl, seek }: {
   view: RunView; jobs: JobView[]; board: Board;
   explain: (jobId: string) => Promise<Explanation>;
   initialStep?: number; side?: ReactNode; after?: ReactNode;
   whyNot?: (jobId: string) => Promise<WhyNot>; passport?: (sid: string) => Promise<Passport>;
   onIntervene?: (sid: string, kind: "satellite_outage" | "close_downlink") => void; interveneStep?: number;
   shareUrl?: (step: number, sid?: string) => string | null;
+  seek?: { step: number; n: number };
 }) {
   const params = new URLSearchParams(window.location.search);
   const urlSat = params.get("sat"), urlT = params.get("t");
@@ -41,6 +42,12 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
     return () => { live = false; };
   }, [picked, explain]);
 
+  useEffect(() => {
+    if (!seek) return;
+    setCursor(Math.min(seek.step, Math.max(board.executed - 1, 0)));
+    document.getElementById("map")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [seek]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const satCells = useMemo(() => board.cells.filter((c) => c.satellite_id === sat), [board, sat]);
 
   return (
@@ -56,7 +63,7 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
 
       <div className="layout">
         <main>
-          <section className="card">
+          <section className="card" id="map">
             <div className="card-head"><h2>Группировка в момент {clock(cursor)}</h2></div>
             <OrbitView board={board} events={v.events} step={cursor} onStep={setCursor} selected={sat} onSelect={setSat} passport={passport}
               onIntervene={onIntervene} interveneStep={interveneStep} shareUrl={shareUrl} />
@@ -88,7 +95,7 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
             <p className="muted small">Пунктир: жёлтый — резерв 30 % (ниже него задания и калибровка не допускаются), красный — критический 20 %.</p>
           </section>
 
-          <section className="card">
+          <section className="card" id="jobs">
             <div className="card-head"><h2>Задания</h2></div>
             <JobsTable jobs={jobs} onPick={setPicked} picked={picked} />
           </section>

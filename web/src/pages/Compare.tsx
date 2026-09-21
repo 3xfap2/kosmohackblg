@@ -17,6 +17,10 @@ export default function Compare() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { store.all().then(setRuns); }, []);
+  // Из шапки смены («Сравнить с родителем») приходят обе смены — сравниваем сразу.
+  useEffect(() => {
+    if (params.get("a") && params.get("b") && runs.length && !cmp && !busy) run();
+  }, [runs]); // eslint-disable-line react-hooks/exhaustive-deps
   const label = (r: RunRecord) =>
     `${r.id.slice(0, 8)} · ${"ref" in r.scenario ? r.scenario.ref : "свой"} · ${GOAL[r.run_metadata.goal]} · ${ALGO[r.run_metadata.algorithm]} · шаг ${r.steps_executed}`;
 

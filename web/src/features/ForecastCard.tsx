@@ -6,25 +6,26 @@ import { clock } from "../format";
 // F4: прогноз на 2 часа — прогон текущего планировщика вперёд, не факт.
 const ICON = { energy: "⚡", p3: "◆", calibration: "◎" } as const;
 
-export default function ForecastCard({ run }: { run: RunRecord }) {
-  const [f, setF] = useState<Forecast | null>(null);
+export default function ForecastCard({ run, data }: { run: RunRecord; data?: Forecast | null }) {
+  const [own, setF] = useState<Forecast | null>(null);
+  const f = data !== undefined ? data : own;
   const [error, setError] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   const done = run.steps_executed >= 288;
 
   useEffect(() => {
-    if (done) return;
+    if (done || data !== undefined) return;
     let live = true;
     setF(null); setError(null);
     const t = setTimeout(() => api.f.forecast(run).then((x) => live && setF(x)).catch((e) => live && setError(e.message)), 250);
     return () => { live = false; clearTimeout(t); };
-  }, [run, done]);
+  }, [run, done, data]);
 
   if (done) return null;
   const shown = f ? (all ? f.alerts : f.alerts.filter((a) => a.severity !== "low").slice(0, 6)) : [];
   const low = f ? f.alerts.filter((a) => a.severity === "low").length : 0;
   return (
-    <section className="card">
+    <section className="card" id="forecast">
       <div className="card-head"><h2>Прогноз на 2 часа</h2>{f && <span className="muted tiny mono">до {clock(f.until_step)}</span>}</div>
       {error && <p className="error">{error}</p>}
       {!f && !error && <div className="skeleton" />}

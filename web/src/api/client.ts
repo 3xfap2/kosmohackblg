@@ -65,6 +65,13 @@ export const api = {
     req<{ answer: string; source: "ai" | "template" | "template_after_check" }>("/api/ai/ask", { run, question }),
   draftEvent: (run: RunRecord, text: string) =>
     req<{ event: Record<string, unknown> | null; error: string | null; note?: string }>("/api/ai/event", { run, text }),
+  verify: (run: RunRecord) => req<{ match: boolean; diff?: unknown }>("/api/runs/verify", { run }),
+  // Выгрузка байт в байт как её отдал сервер: разбор в JavaScript потерял бы «.0» у чисел.
+  exportText: async (run: RunRecord) => {
+    const res = await fetch(BASE + "/api/runs/export", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run }) });
+    if (!res.ok) throw new ApiError(res.status, `Ошибка сервера ${res.status}`);
+    return res.text();
+  },
   replay: (result: unknown) => req<{ match: boolean; summary: unknown; diff?: unknown }>("/api/replay", result),
 };
 

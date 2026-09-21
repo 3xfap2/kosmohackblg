@@ -83,3 +83,8 @@ footer { margin-top: 96px; font-size: 13px; }
 @media (max-width: 860px) { .proof-grid { grid-template-columns: 1fr; } }
 
 .hero-art canvas { -webkit-mask-image: radial-gradient(ellipse 70% 70% at 55% 50%, #000 55%, transparent 100%); mask-image: radial-gradient(ellipse 70% 70% at 55% 50%, #000 55%, transparent 100%); }
+.proof-wide { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-top: 14px; padding: 22px; }
+.proof-wide h3 { font: 700 18px var(--font-display); color: var(--text-strong); margin: 6px 0 0; }
+.proof-wide p { margin: 0; }
+.proof-side { margin-left: 18px; padding-left: 18px; border-left: 1px solid var(--line); }
+.proof-side b { font-size: 20px !important; }

@@ -10,6 +10,7 @@ interface Res { p3_done: number; p3_due: number; jobs_done: number; jobs_total: 
 interface Proof {
   available: boolean; source?: string; runs?: number; replay_ok?: number; repeat_ok?: number;
   rows: ({ scenario: string; goal: string } & Record<"edf-baseline" | "goal-greedy" | "horizon-cpsat", Res | null>)[];
+  events?: { goal: string; adaptive: Res; frozen: Res }[];
 }
 const SCEN: Record<string, string> = { P02_shift: "Обычная смена", P03_energy: "Дефицит энергии", P04_demand: "Перегрузка заданиями" };
 
@@ -94,6 +95,20 @@ export default function Landing() {
                 );
               })}
             </div>
+            {proof.events?.filter((e) => e.goal === "priority").map((e) => (
+              <div key={e.goal} className="card proof-wide">
+                <div>
+                  <p className="muted small">Смена P02 + 4 сообщения организаторов: срочные заявки, отказ двух спутников, отмена связи</p>
+                  <h3>Перестройка плана после каждого сообщения против «старого плана»</h3>
+                </div>
+                <div className="proof-nums">
+                  <div><span className="muted tiny">старый план</span><b className="mono dim">{e.frozen.p3_done}<small>/{e.frozen.p3_due}</small></b></div>
+                  <i>→</i>
+                  <div><span className="muted tiny">с перестройкой</span><b className="mono">{e.adaptive.p3_done}<small>/{e.adaptive.p3_due}</small></b></div>
+                  <div className="proof-side"><span className="muted tiny">выручка</span><b className="mono">{usd(e.frozen.revenue_usd)} → {usd(e.adaptive.revenue_usd)}</b></div>
+                </div>
+              </div>
+            ))}
             <p className="proof-meta mono small">
               <span className="ok-text">✓</span> {proof.replay_ok} из {proof.runs} прогонов повторены моделью организаторов с тем же итогом ·
               <span className="ok-text"> ✓</span> {proof.repeat_ok} повторены дважды побитно · источник: <span className="id">{proof.source}</span>

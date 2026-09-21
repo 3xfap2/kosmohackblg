@@ -91,7 +91,7 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero" 1; }
 /* ---------- Появление ---------- */
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-.rise { animation: rise 520ms var(--ease-out) both; }
+.rise { animation: rise 520ms var(--ease-out) backwards; }
 .rise-1 { animation-delay: 60ms; } .rise-2 { animation-delay: 120ms; } .rise-3 { animation-delay: 180ms; }
 .rise-4 { animation-delay: 240ms; } .rise-5 { animation-delay: 300ms; }
 

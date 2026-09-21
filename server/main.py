@@ -175,6 +175,13 @@ def export(body: Export):
     return JSONResponse(data, headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
+@app.post("/api/runs/verify")
+def verify(body: RunOnly):
+    """Проверка целиком на сервере: выгрузка → повтор официальной моделью. Без круга через браузер:
+    JavaScript превращает 125.0 в 125, и хеш исходного сценария перестал бы совпадать."""
+    return call(service.replay, call(service.export, body.run, False))
+
+
 @app.post("/api/replay")
 def replay(result: dict = Body(...)):
     return call(service.replay, result)

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api } from "../api/client";
 import { store } from "../api/store";
-import type { Algorithm, EventRecord, Goal, Impact, JobView, RunRecord, RunView, Timeline } from "../api/types";
+import type { Algorithm, EventRecord, Forecast, Goal, Impact, JobView, RunRecord, RunView, Timeline } from "../api/types";
 import ImpactCard from "../features/ImpactCard";
 import ChatWidget from "../components/ChatWidget";
 import ForecastCard from "../features/ForecastCard";
@@ -10,10 +10,10 @@ import ReportModal from "../features/ReportModal";
 import Research from "../features/Research";
 import EventComposer from "../components/EventComposer";
 import RunDashboard from "../components/RunDashboard";
+import RunHeader from "../components/RunHeader";
 import RunSkeleton from "../components/RunSkeleton";
 import { fromTimeline } from "../lib/cells";
-import { ALGO, GOAL, clock } from "../format";
-import { Term } from "../glossary";
+import { GOAL, clock } from "../format";
 
 // Живой запуск: запись хранится в браузере, сервер пересчитывает по ней и возвращает новую.
 export default function LiveRun() {
@@ -28,6 +28,8 @@ export default function LiveRun() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"control" | "event">("control");
   const [report, setReport] = useState(false);
+  const [seek, setSeek] = useState<{ step: number; n: number } | undefined>();
+  const [forecast, setForecast] = useState<Forecast | null>(null);
   const [intervention, setIntervention] = useState<{ event: Record<string, unknown>; impact?: Impact; error?: string; sent?: string | null } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const suggestions = useMemo<EventRecord[]>(() => {
@@ -94,14 +96,26 @@ export default function LiveRun() {
     if (!run) return;
     setBusy("Выгрузка…");
     try {
-      const data = await api.export(run);
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+      const text = await api.exportText(run);
+      const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
       Object.assign(document.createElement("a"), { href: url, download: `sozvezdie_${run.id.slice(0, 8)}_step${run.steps_executed}.json` }).click();
       URL.revokeObjectURL(url);
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };
 
   const board = useMemo(() => (timeline ? fromTimeline(timeline) : null), [timeline]);
+  // Прогноз — один запрос на состояние смены: для колокольчика в шапке и карточки прогноза.
+  useEffect(() => {
+    if (!run || run.steps_executed >= 288 || busy) return;
+    let live = true;
+    setForecast(null);
+    const t = setTimeout(() => api.f.forecast(run).then((f) => live && setForecast(f)).catch(() => live && setForecast(null)), 300);
+    return () => { live = false; clearTimeout(t); };
+  }, [run, busy]);
+  const openEvents = useCallback(() => {
+    setTab("event");
+    document.querySelector(".control")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
   const explain = useCallback((jobId: string) => api.explain(run!, { job_id: jobId }), [run]);
   const whyNot = useCallback((jobId: string) => api.f.whyNot(run!, jobId), [run]);
   const passport = useCallback((sid: string) => api.f.passport(run!, sid), [run]);
@@ -178,23 +192,17 @@ export default function LiveRun() {
           usedIds={[...view.events.map((e) => e.id)]} onSend={sendEvent} />
       )}
     </section>
-    <ForecastCard run={run} />
+    <ForecastCard run={run} data={forecast} />
   </>);
 
   return (
     <>
-      <div className="run-head">
-        <div className="bar-info">
-          <span className="id">{"ref" in run.scenario ? run.scenario.ref : "свой сценарий"}</span>
-          <span className="muted">{GOAL[view.goal]}</span>
-          <span className="muted">{ALGO[view.algorithm.name]}</span>
-          {view.parent && <span className="tag">ветвь от {view.parent.run_id.slice(0, 8)} с шага {view.parent.fork_step}</span>}
-        </div>
-        <div className="bar-step mono">{clock(k)} · <Term k="step">шаг</Term> {k} из {total}{done ? " · смена завершена" : ""}</div>
-      </div>
+      <RunHeader run={run} view={view} busy={!!busy} forecast={forecast} suggestions={suggestions}
+        onAdvance={go} onSeek={(step) => setSeek({ step, n: Date.now() })} onGoal={changeGoal} onFork={fork}
+        onEvents={openEvents} onForecast={() => document.getElementById("forecast")?.scrollIntoView({ behavior: "smooth", block: "center" })} />
       <RunDashboard view={view} jobs={jobs} board={board} explain={explain} side={side}
         after={k > 0 ? <Research run={run} /> : undefined}
-        whyNot={whyNot} passport={passport} shareUrl={shareUrl}
+        whyNot={whyNot} passport={passport} shareUrl={shareUrl} seek={seek}
         onIntervene={done ? undefined : intervene} interveneStep={done ? undefined : k} />
       {intervention && (
         <div className="modal-back" onClick={() => setIntervention(null)}>
