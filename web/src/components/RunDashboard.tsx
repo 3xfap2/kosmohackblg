@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Explanation, JobView, Passport, RunView, WhyNot } from "../api/types";
 import type { Board } from "../lib/cells";
-import { clock, pct, usd } from "../format";
+import { EVENT_TYPE, clock, pct, usd } from "../format";
+import { Term } from "../glossary";
 import ExplainPanel from "./ExplainPanel";
 import Gantt from "./Gantt";
 import JobsTable from "./JobsTable";
@@ -9,20 +10,25 @@ import OrbitView from "./OrbitView";
 import SocChart from "./SocChart";
 
 // Общая панель смены: одинаково для демо и живого запуска. Все числа — из RunView ядра.
-export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side, after, whyNot, passport }: {
+export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side, after, whyNot, passport, onIntervene, interveneStep, shareUrl }: {
   view: RunView; jobs: JobView[]; board: Board;
   explain: (jobId: string) => Promise<Explanation>;
   initialStep?: number; side?: ReactNode; after?: ReactNode;
   whyNot?: (jobId: string) => Promise<WhyNot>; passport?: (sid: string) => Promise<Passport>;
+  onIntervene?: (sid: string, kind: "satellite_outage" | "close_downlink") => void; interveneStep?: number;
+  shareUrl?: (step: number, sid?: string) => string | null;
 }) {
-  const [sat, setSat] = useState(board.satellites[0] ?? "S01");
-  const [cursor, setCursor] = useState(initialStep ?? Math.max(board.executed - 1, 0));
+  const params = new URLSearchParams(window.location.search);
+  const urlSat = params.get("sat"), urlT = params.get("t");
+  const [sat, setSat] = useState(urlSat && board.satellites.includes(urlSat) ? urlSat : board.satellites[0] ?? "S01");
+  const [cursor, setCursor] = useState(initialStep ?? (urlT != null ? Math.min(Number(urlT) || 0, Math.max(board.executed - 1, 0)) : Math.max(board.executed - 1, 0)));
   const [picked, setPicked] = useState<string | undefined>();
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const s = v.summary;
 
   // Курсор следует за расчётом, пока смена идёт.
-  useEffect(() => { setCursor(Math.max(board.executed - 1, 0)); }, [board.executed]);
+  const first = useRef(true);
+  useEffect(() => { if (first.current && urlT != null) { first.current = false; return; } first.current = false; setCursor(Math.max(board.executed - 1, 0)); }, [board.executed]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!picked && jobs.length) setPicked(jobs.find((j) => j.status === "missed")?.id);
   }, [jobs, picked]);
@@ -40,29 +46,30 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
   return (
     <>
       <section className="kpis">
-        <Kpi label="Приоритет 3 в срок" value={`${s.critical_jobs_completed_on_time} / ${s.critical_jobs_due}`} sub={pct(v.kpi.p3_on_time_share)} />
+        <Kpi label={<><Term k="p3">Приоритет 3</Term> в срок</>} value={`${s.critical_jobs_completed_on_time} / ${s.critical_jobs_due}`} sub={pct(v.kpi.p3_on_time_share)} />
         <Kpi label="Выполнено заданий" value={`${s.jobs_completed} / ${s.jobs_total}`} sub={`просрочено ${s.jobs_due_missed}`} />
-        <Kpi label="Выручка смены" value={usd(s.revenue_usd)} sub={`упущено ${usd(v.kpi.revenue_lost_in_missed_usd)}`} />
-        <Kpi label="Минимальный заряд" value={`${s.minimum_soc_pct.toFixed(1)}%`} sub={`ниже резерва: ${s.below_reserve_satellite_steps} ап.-шагов`} />
-        <Kpi label="Отклонено моделью" value={String(s.blocked_command_count)} sub="команд" />
-        <Kpi label="Загрузка аппаратов" value={pct(v.kpi.utilization)} sub="доля шагов с заданием" />
+        <Kpi label={<Term k="revenue">Выручка смены</Term>} value={usd(s.revenue_usd)} sub={`упущено ${usd(v.kpi.revenue_lost_in_missed_usd)}`} />
+        <Kpi label="Минимальный заряд" value={`${s.minimum_soc_pct.toFixed(1)}%`} sub={<>ниже <Term k="reserve">резерва</Term>: {s.below_reserve_satellite_steps} <Term k="satsteps">ап.-шагов</Term></>} />
+        <Kpi label={<><Term k="blocked">Отклонено</Term> <Term k="model">моделью</Term></>} value={String(s.blocked_command_count)} sub="команд" />
+        <Kpi label={<Term k="utilization">Загрузка аппаратов</Term>} value={pct(v.kpi.utilization)} sub="доля шагов с заданием" />
       </section>
 
       <div className="layout">
         <main>
           <section className="card">
             <div className="card-head"><h2>Группировка в момент {clock(cursor)}</h2></div>
-            <OrbitView board={board} events={v.events} step={cursor} onStep={setCursor} selected={sat} onSelect={setSat} passport={passport} />
+            <OrbitView board={board} events={v.events} step={cursor} onStep={setCursor} selected={sat} onSelect={setSat} passport={passport}
+              onIntervene={onIntervene} interveneStep={interveneStep} shareUrl={shareUrl} />
           </section>
 
           <section className="card">
             <div className="card-head">
               <h2>Подробное расписание</h2>
               <div className="legend mono">
-                <i style={{ background: "var(--relay)" }} />ретрансляция
-                <i style={{ background: "var(--info)" }} />на Землю
-                <i style={{ background: "var(--warn)" }} />калибровка
-                <i style={{ background: "var(--surface)", border: "1px solid var(--line)" }} />тень
+                <i style={{ background: "var(--relay)" }} /><Term k="relay">ретрансляция</Term>
+                <i style={{ background: "var(--info)" }} /><Term k="downlink">на Землю</Term>
+                <i style={{ background: "var(--warn)" }} /><Term k="calibration">калибровка</Term>
+                <i style={{ background: "var(--surface)", border: "1px solid var(--line)" }} /><Term k="shadow">тень</Term>
                 <i style={{ background: "var(--bad)" }} />отказ
               </div>
             </div>
@@ -101,7 +108,7 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
               {v.events.map((e) => (
                 <li key={e.id}>
                   <span className="mono muted">{clock(e.at_step)}</span> <span className="id">{e.id}</span>{" "}
-                  {e.type === "add_jobs" ? `новые задания: ${e.jobs.map((j) => j.id).join(", ")}`
+                  {e.type === "add_jobs" ? `${EVENT_TYPE.add_jobs}: ${e.jobs.map((j) => j.id).join(", ")}`
                     : e.type === "satellite_outage" ? `недоступны ${e.satellite_ids.join(", ")} до ${clock(e.end_step)}`
                     : `отмена сеансов: ${e.satellite_ids.length} ап. до ${clock(e.end_step)}`}
                 </li>
@@ -124,7 +131,7 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
   );
 }
 
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Kpi({ label, value, sub }: { label: ReactNode; value: string; sub?: ReactNode }) {
   return (
     <div className="kpi">
       <div className="kpi-label">{label}</div>

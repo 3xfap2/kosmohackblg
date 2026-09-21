@@ -408,7 +408,8 @@ def shift_report(record):
         f"- Минимальный заряд: {summary['minimum_soc_pct']:.1f}%, отклонённых моделью команд: {summary['blocked_command_count']}",
         "", "## Сообщения смены",
     ]
-    lines += [f"- {hh(e['at_step'])} {e['id']}: {e['type']}" for e in session.events] or ["- не было"]
+    kinds = {"add_jobs": "новые задания", "satellite_outage": "отказ спутников", "close_downlink": "отмена сеансов связи с Землёй"}
+    lines += [f"- {hh(e['at_step'])} {e['id']}: {kinds.get(e['type'], e['type'])}" for e in session.events] or ["- не было"]
     lines += ["", "## Потери по причинам"]
     lines += [f"- {group[g]} — {code}: {cnt}" for (g, code), cnt in sorted(losses.items())] or ["- потерь нет"]
     if unexplained:

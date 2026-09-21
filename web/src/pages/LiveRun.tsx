@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api } from "../api/client";
 import { store } from "../api/store";
-import type { Algorithm, EventRecord, Goal, JobView, RunRecord, RunView, Timeline } from "../api/types";
+import type { Algorithm, EventRecord, Goal, Impact, JobView, RunRecord, RunView, Timeline } from "../api/types";
+import ImpactCard from "../features/ImpactCard";
 import ChatWidget from "../components/ChatWidget";
 import ForecastCard from "../features/ForecastCard";
 import ReportModal from "../features/ReportModal";
@@ -12,6 +13,7 @@ import RunDashboard from "../components/RunDashboard";
 import RunSkeleton from "../components/RunSkeleton";
 import { fromTimeline } from "../lib/cells";
 import { ALGO, GOAL, clock } from "../format";
+import { Term } from "../glossary";
 
 // Живой запуск: запись хранится в браузере, сервер пересчитывает по ней и возвращает новую.
 export default function LiveRun() {
@@ -26,6 +28,7 @@ export default function LiveRun() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"control" | "event">("control");
   const [report, setReport] = useState(false);
+  const [intervention, setIntervention] = useState<{ event: Record<string, unknown>; impact?: Impact; error?: string; sent?: string | null } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const suggestions = useMemo<EventRecord[]>(() => {
     try { return JSON.parse(localStorage.getItem(`sz_suggest_${id}`) ?? "[]"); } catch { return []; }
@@ -103,6 +106,28 @@ export default function LiveRun() {
   const whyNot = useCallback((jobId: string) => api.f.whyNot(run!, jobId), [run]);
   const passport = useCallback((sid: string) => api.f.passport(run!, sid), [run]);
 
+  // п.8: вмешательство прямо с карты — сначала цена (3 ветви), потом решение оператора.
+  const intervene = useCallback((sid: string, kind: "satellite_outage" | "close_downlink") => {
+    if (!run || !view) return;
+    const k0 = run.steps_executed;
+    let n = view.events.length + 1;
+    while (view.events.some((e) => e.id === `OP-${n}`)) n++;
+    const event = { id: `OP-${n}`, at_step: k0, type: kind, satellite_ids: [sid], end_step: Math.min(k0 + 12, view.steps_total) };
+    setIntervention({ event });
+    api.f.impact(run, event).then((impact) => setIntervention({ event, impact })).catch((e) => setIntervention({ event, error: e.message }));
+  }, [run, view]);
+
+  // п.10: ссылка на момент — только для демо-смены: её любой может пересоздать по той же ссылке.
+  const shareUrl = useCallback((step: number, sid?: string) => {
+    let demoId: string | null = null;
+    try { demoId = localStorage.getItem("sz_demo_run_v2"); } catch { /* нет хранилища */ }
+    // Демо пересоздаётся остановленным в 12:00 (шаг 144, server/main.py DEMO_STOP) — ссылка только до этого момента.
+    if (!run || run.id !== demoId || step >= 144) return null;
+    const q = new URLSearchParams({ t: String(step) });
+    if (sid) q.set("sat", sid);
+    return `${window.location.origin}/console/demo?${q}`;
+  }, [run]);
+
   if (error && !view) return <p className="error">{error}</p>;
   if (!run || !view || !board) return <RunSkeleton />;
   const total = view.steps_total, k = run.steps_executed, done = k >= total;
@@ -165,11 +190,32 @@ export default function LiveRun() {
           <span className="muted">{ALGO[view.algorithm.name]}</span>
           {view.parent && <span className="tag">ветвь от {view.parent.run_id.slice(0, 8)} с шага {view.parent.fork_step}</span>}
         </div>
-        <div className="bar-step mono">шаг {k}/{total} · {clock(k)}{done ? " · смена завершена" : ""}</div>
+        <div className="bar-step mono">{clock(k)} · <Term k="step">шаг</Term> {k} из {total}{done ? " · смена завершена" : ""}</div>
       </div>
       <RunDashboard view={view} jobs={jobs} board={board} explain={explain} side={side}
         after={k > 0 ? <Research run={run} /> : undefined}
-        whyNot={whyNot} passport={passport} />
+        whyNot={whyNot} passport={passport} shareUrl={shareUrl}
+        onIntervene={done ? undefined : intervene} interveneStep={done ? undefined : k} />
+      {intervention && (
+        <div className="modal-back" onClick={() => setIntervention(null)}>
+          <div className="modal" role="dialog" aria-label="Цена вмешательства" onClick={(e) => e.stopPropagation()}>
+            <header><b>{intervention.event.type === "satellite_outage" ? "Отключить" : "Отменить связь с Землёй у"} {(intervention.event.satellite_ids as string[])[0]} с {clock(k)} до {clock(intervention.event.end_step as number)}</b>
+              <button className="icon-btn" onClick={() => setIntervention(null)} aria-label="Закрыть">×</button></header>
+            <div className="modal-body">
+              {!intervention.impact && !intervention.error && <><p className="muted small">Считаю три продолжения из текущего состояния моделью организаторов…</p><div className="skeleton tall" /></>}
+              {intervention.error && <p className="error">{intervention.error}</p>}
+              {intervention.impact && <ImpactCard r={intervention.impact} />}
+              {intervention.sent === null && <p className="ok-text">Сообщение принято — план перестроен с {clock(k)}.</p>}
+              {intervention.sent && <p className="error">{intervention.sent}</p>}
+            </div>
+            <footer>
+              <button className="btn" onClick={() => setIntervention(null)}>Не отправлять</button>
+              <button className="btn btn-primary" disabled={!intervention.impact || intervention.sent === null || !!busy}
+                onClick={async () => { const err = await sendEvent(intervention.event); setIntervention((x) => x && { ...x, sent: err }); }}>Отправить как сообщение</button>
+            </footer>
+          </div>
+        </div>
+      )}
       {report && <ReportModal run={run} onClose={() => setReport(false)} />}
       {k > 0 && <ChatWidget run={run} />}
     </>

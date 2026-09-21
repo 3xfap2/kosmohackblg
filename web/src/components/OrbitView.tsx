@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { EventRecord, Passport } from "../api/types";
 import type { Board, Cell } from "../lib/cells";
 import { REASON, clock } from "../format";
+import { Term } from "../glossary";
 
 // «Живая орбита»: схема группировки на выбранном шаге.
 // Координат спутников в данных нет, поэтому положение — схематичное: фаза на орбите
@@ -16,6 +17,9 @@ interface Props {
   selected?: string;
   onSelect?: (sid: string) => void;
   passport?: (sid: string) => Promise<Passport>;
+  onIntervene?: (sid: string, kind: "satellite_outage" | "close_downlink") => void;
+  interveneStep?: number;
+  shareUrl?: (step: number, sid?: string) => string | null;
 }
 
 type State = "relay" | "downlink" | "calibrate" | "idle" | "down" | "rejected";
@@ -37,6 +41,8 @@ const RINGS = [
   { r: 2.64, tilt: 0.2, squash: 0.38 },
 ];
 const ZOOM_MIN = 1, ZOOM_MAX = 6, LABELS_FROM = 2.2;
+// Наземные станции на схеме — углы на поверхности Земли (реальных координат в данных нет).
+const STATIONS = [Math.PI * 0.82, Math.PI * 1.2, Math.PI * 1.55];
 
 interface SatOrbit { ring: number; period: number; starts: number[]; shadowLen: number }
 
@@ -67,7 +73,7 @@ function stars(n: number, w: number, h: number) {
   return Array.from({ length: n }, () => ({ x: rnd() * w, y: rnd() * h, r: rnd() * 1.1 + 0.2, a: rnd() * 0.5 + 0.15, tw: rnd() * 6 }));
 }
 
-export default function OrbitView({ board, events, step, onStep, selected, onSelect, passport }: Props) {
+export default function OrbitView({ board, events, step, onStep, selected, onSelect, passport, onIntervene, interveneStep, shareUrl }: Props) {
   const steps = board.steps;
   const last = Math.max(board.executed - 1, 0);
   const ref = useRef<HTMLCanvasElement>(null);
@@ -119,25 +125,57 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
   };
 
   const k = Math.min(step, last);
+  // Ожидание по фактам журнала: заряд ниже резерва → работать нельзя; в тени → копит заряд; иначе — без задачи.
+  const idleKind = (sid: string, kk: number): "low" | "dark" | "wait" => {
+    const c = byStep[kk]?.[sid];
+    if (c && c.soc < 30) return "low";
+    return isDark(sid, kk) ? "dark" : "wait";
+  };
   const counts = useMemo(() => {
-    const c: Record<string, number> = { relay: 0, downlink: 0, calibrate: 0, idle: 0, down: 0, rejected: 0, dark: 0 };
+    const c: Record<string, number> = { relay: 0, downlink: 0, calibrate: 0, idle: 0, down: 0, rejected: 0, dark: 0, wait: 0, low: 0, idleDark: 0 };
     for (const sid of sats) {
-      c[stateOf(sid, k)]++;
+      const st = stateOf(sid, k);
+      c[st]++;
+      if (st === "idle") { const w = idleKind(sid, k); c[w === "dark" ? "idleDark" : w]++; }
       if (isDark(sid, k)) c.dark++;
     }
     return c;
   }, [sats, k, byStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // п.7: рассказ — подписи к ключевым моментам смены.
+  const story = useMemo(() => {
+    const items: { step: number; title: string; text: string; tone: "info" | "warn" }[] = [
+      { step: 0, title: "Начало смены", tone: "info",
+        text: `${sats.length} спутников, задания на ${Math.round(steps * 5 / 60)} ч. Цвет точки — чем занят спутник; справа тень Земли, там нет солнечной энергии.` },
+    ];
+    for (const e of events) {
+      if (e.type === "add_jobs") items.push({ step: e.at_step, tone: "warn", title: "Срочные задания",
+        text: `Поступили ${e.jobs.map((j) => j.id).join(", ")}. Планировщик встроил их в план с этого шага — остальное перестроено вокруг них.` });
+      else if (e.type === "satellite_outage") items.push({ step: e.at_step, tone: "warn", title: `Отказ ${e.satellite_ids.join(", ")}`,
+        text: `Спутники недоступны до ${clock(e.end_step)}. Их ретрансляцию берут другие допустимые спутники; передачи на Землю этих спутников ждут.` });
+      else items.push({ step: e.at_step, tone: "warn", title: "Отмена связи с Землёй",
+        text: `Сеансы передачи отменены у ${e.satellite_ids.length} спутников до ${clock(e.end_step)}. Ретрансляция продолжается, передачи на Землю откладываются.` });
+    }
+    if (last > 0) items.push({ step: last, title: board.executed >= steps ? "Смена завершена" : "Здесь смена остановлена", tone: "info",
+      text: board.executed >= steps ? "Итоги — в показателях выше. Нажмите на сорванное задание, чтобы узнать причину."
+        : "Дальше решаете вы: отправьте сообщение организаторов или продолжите расчёт в панели справа." });
+    return items.sort((a, b) => a.step - b.step);
+  }, [events, sats.length, steps, last, board.executed]);
+  const [storyMode, setStoryMode] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const caption = [...story].reverse().find((s) => s.step <= k && k < s.step + 14) ?? null;
+
   // Проигрывание смены.
   useEffect(() => {
     if (!playing) return;
-    const id = setInterval(() => {
+    const pause = storyMode && story.some((s) => s.step === step) ? 2600 : 0;
+    const id = setTimeout(() => {
       const next = step + 1;
-      if (next > last) { setPlaying(false); return; }
+      if (next > last) { setPlaying(false); setStoryMode(false); return; }
       onStep(next);
-    }, 220 / speed);
-    return () => clearInterval(id);
-  }, [playing, speed, step, last, onStep]);
+    }, pause + (storyMode ? 90 : 220 / speed));
+    return () => clearTimeout(id);
+  }, [playing, speed, step, last, onStep, storyMode, story]);
 
   // Масштаб относительно точки (sx, sy) на экране: точка под курсором остаётся на месте.
   const zoomAt = (factor: number, sx?: number, sy?: number) => {
@@ -241,11 +279,13 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
         const col = COLOR[st];
         const size = Math.min(1 + (z - 1) * 0.25, 1.9);
         if (st === "downlink") {
-          const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy);
-          const beam = g.createLinearGradient(p.x, p.y, cx + (dx / d) * R, cy + (dy / d) * R);
-          beam.addColorStop(0, "rgba(108,182,255,0.85)"); beam.addColorStop(1, "rgba(108,182,255,0.05)");
-          g.strokeStyle = beam; g.lineWidth = 1.4;
-          g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(cx + (dx / d) * R, cy + (dy / d) * R); g.stroke();
+          // Ближайшая наземная станция (схема: три станции на поверхности).
+          const st0 = STATIONS.map((a) => ({ x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R }))
+            .sort((u, v) => Math.hypot(u.x - p.x, u.y - p.y) - Math.hypot(v.x - p.x, v.y - p.y))[0];
+          const beam = g.createLinearGradient(p.x, p.y, st0.x, st0.y);
+          beam.addColorStop(0, "rgba(108,182,255,0.9)"); beam.addColorStop(1, "rgba(108,182,255,0.25)");
+          g.strokeStyle = beam; g.lineWidth = 1.4; g.setLineDash([4, 3]); g.lineDashOffset = -now / 60;
+          g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(st0.x, st0.y); g.stroke(); g.setLineDash([]);
         }
         if (st === "relay" || st === "downlink" || st === "calibrate") {
           const halo = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, (9 + pulse * 3) * size);
@@ -282,10 +322,19 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
       g.strokeStyle = "rgba(140,200,255,0.35)"; g.lineWidth = 1.2;
       g.beginPath(); g.arc(cx, cy, R + 1, Math.PI * 0.55, Math.PI * 1.45); g.stroke();
 
+      for (const a of STATIONS) {
+        const sx = cx + Math.cos(a) * R, sy = cy + Math.sin(a) * R;
+        g.fillStyle = "#6cb6ff"; g.beginPath(); g.moveTo(sx, sy - 5); g.lineTo(sx - 4, sy + 3); g.lineTo(sx + 4, sy + 3); g.closePath(); g.fill();
+      }
       for (const p of placed) if (p.front) drawSat(p.sid, p);
 
-      g.fillStyle = "rgba(223,230,255,0.4)"; g.font = "11px JetBrains Mono, monospace";
-      g.fillText("☀ Солнце", 14, h / 2 + 4);
+      // Солнце слева: свет приходит отсюда, тень Земли — справа.
+      const sunX = 26, sunY = h / 2;
+      const sun = g.createRadialGradient(sunX, sunY, 0, sunX, sunY, 46);
+      sun.addColorStop(0, "rgba(255,214,120,0.95)"); sun.addColorStop(0.25, "rgba(255,190,90,0.55)"); sun.addColorStop(1, "rgba(255,190,90,0)");
+      g.fillStyle = sun; g.beginPath(); g.arc(sunX, sunY, 46, 0, 7); g.fill();
+      g.fillStyle = "rgba(255,220,150,0.8)"; g.font = "600 11px Onest, sans-serif";
+      g.fillText("Солнце", 12, sunY + 40);
       if (!reduce || playing) raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
@@ -353,10 +402,15 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
           <div className="muted">шаг {k} из {steps}{board.executed < steps ? ` · выполнено ${board.executed}` : ""}</div>
         </div>
         <ul className="orbit-counts">
-          {(["downlink", "relay", "calibrate", "idle", "down"] as State[]).map((s) => (
-            <li key={s}><i style={{ background: COLOR[s], boxShadow: `0 0 8px ${COLOR[s]}66` }} />{LABEL[s]}<b className="mono">{counts[s]}</b></li>
-          ))}
-          <li><i style={{ background: "#0b0e14", border: "1px solid #3a3f44" }} />в тени Земли<b className="mono">{counts.dark}</b></li>
+          <li><i style={{ background: COLOR.downlink, boxShadow: `0 0 8px ${COLOR.downlink}66` }} /><Term k="downlink">передаёт на Землю</Term><b className="mono">{counts.downlink}</b></li>
+          <li><i style={{ background: COLOR.relay, boxShadow: `0 0 8px ${COLOR.relay}66` }} /><Term k="relay">ретранслирует</Term><b className="mono">{counts.relay}</b></li>
+          <li><i style={{ background: COLOR.calibrate, boxShadow: `0 0 8px ${COLOR.calibrate}66` }} /><Term k="calibration">калибруется</Term><b className="mono">{counts.calibrate}</b></li>
+          <li className="sub-head"><i style={{ background: COLOR.idle }} />ждут<b className="mono">{counts.idle}</b></li>
+          <li className="sub"><Term k="shadow">в тени, копят заряд</Term><b className="mono">{counts.idleDark}</b></li>
+          <li className="sub">без задачи на этом шаге<b className="mono">{counts.wait}</b></li>
+          <li className="sub"><Term k="reserve">заряд ниже резерва</Term><b className="mono">{counts.low}</b></li>
+          <li><i style={{ background: COLOR.down }} />недоступны<b className="mono">{counts.down}</b></li>
+          <li className="legend-note"><span className="tri" />наземная станция · схема</li>
         </ul>
         <div className="orbit-zoom">
           <button className="icon-btn" onClick={() => zoomAt(1.4)} aria-label="Приблизить">+</button>
@@ -364,12 +418,11 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
           <button className="icon-btn" onClick={() => zoomAt(1 / 1.4)} aria-label="Отдалить">−</button>
           <button className="icon-btn" onClick={resetView} aria-label="Сбросить вид" disabled={zoom === 1}>⟲</button>
         </div>
-        {eventsNow.length > 0 && (
-          <div className="orbit-event mono">
-            {eventsNow.map((e) => (
-              <div key={e.id}>⚡ {clock(e.at_step)} {e.type === "add_jobs" ? "срочные задания"
-                : e.type === "satellite_outage" ? `отказ ${e.satellite_ids.join(", ")}` : "отмена сеансов связи"}</div>
-            ))}
+        {caption && (playing || eventsNow.length > 0 || caption.step === last) && (
+          <div className={"caption " + caption.tone} key={caption.step + caption.title}>
+            <span className="mono tiny">{clock(caption.step)}</span>
+            <b>{caption.title}</b>
+            <p>{caption.text}</p>
           </div>
         )}
         {selected && cardOpen && (
@@ -401,6 +454,15 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
             )}
             <Spark cells={selHistory} />
             <p className="muted tiny">Заряд за последние 3 часа до {clock(k)}</p>
+            {onIntervene && interveneStep != null && (
+              <div className="intervene">
+                <p className="muted tiny">Что будет, если с {clock(interveneStep)} на час:</p>
+                <div className="row-inline">
+                  <button className="btn" onClick={() => onIntervene(selected, "satellite_outage")}>Отключить {selected}</button>
+                  <button className="btn" onClick={() => onIntervene(selected, "close_downlink")}>Без связи с Землёй</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {hover && (
@@ -414,8 +476,12 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
       </div>
 
       <div className="orbit-controls">
-        <button className="btn btn-play" disabled={last === 0} onClick={() => { if (step >= last) onStep(0); setPlaying(!playing); }}>
-          {playing ? "❚❚  Пауза" : "▶  Проиграть смену"}
+        <button className="btn btn-play" disabled={last === 0} onClick={() => { if (step >= last) onStep(0); setStoryMode(false); setPlaying(!playing); }}>
+          {playing && !storyMode ? "❚❚  Пауза" : "▶  Проиграть смену"}
+        </button>
+        <button className={"btn btn-story" + (storyMode ? " on" : "")} disabled={last === 0}
+          onClick={() => { if (storyMode) { setStoryMode(false); setPlaying(false); } else { onStep(0); setStoryMode(true); setPlaying(true); } }}>
+          {storyMode ? "■  Стоп" : "✦  Рассказ"}
         </button>
         <div className="timeline">
           <input type="range" min={0} max={last} value={k} onChange={(e) => { setPlaying(false); onStep(+e.target.value); }}
@@ -424,6 +490,12 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
             <span key={e.id} className="tick" style={{ left: `${(e.at_step / Math.max(last, 1)) * 100}%` }} title={`${e.id} · ${clock(e.at_step)}`} />
           ))}
         </div>
+        {shareUrl && shareUrl(k, selected) && (
+          <button className="btn btn-share" onClick={async () => {
+            const url = shareUrl(k, selected)!;
+            try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { window.prompt("Ссылка на момент", url); }
+          }}>{copied ? "Скопировано ✓" : "🔗 Ссылка на момент"}</button>
+        )}
         <div className="speed">
           {[1, 4, 12].map((s) => (
             <button key={s} className={"chip" + (speed === s ? " on" : "")} onClick={() => setSpeed(s)}>×{s}</button>

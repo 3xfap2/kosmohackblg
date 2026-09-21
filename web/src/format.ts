@@ -58,3 +58,11 @@ export const clock = (step: number) => {
   const m = step * 5;
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 };
+
+export const EVENT_TYPE: Record<string, string> = {
+  add_jobs: "новые задания",
+  satellite_outage: "отказ спутников",
+  close_downlink: "отмена сеансов связи с Землёй",
+};
+
+export const KIND: Record<string, string> = { downlink: "на Землю", relay: "ретрансляция" };

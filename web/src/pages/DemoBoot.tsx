@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { store } from "../api/store";
 import RunSkeleton from "../components/RunSkeleton";
@@ -11,6 +11,7 @@ let pending: ReturnType<typeof api.demo> | null = null;   // один расчё
 
 export default function DemoBoot({ fresh = false }: { fresh?: boolean }) {
   const nav = useNavigate();
+  const search = useLocation().search;   // п.10: t и sat из ссылки на момент
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export default function DemoBoot({ fresh = false }: { fresh?: boolean }) {
     (async () => {
       let id: string | null = null;
       try { id = fresh ? null : localStorage.getItem(KEY); } catch { /* хранилище недоступно */ }
-      if (id && (await store.all()).some((r) => r.id === id)) { nav(`/console/run/${id}`, { replace: true }); return; }
+      if (id && (await store.all()).some((r) => r.id === id)) { nav(`/console/run/${id}${search}`, { replace: true }); return; }
       try {
         pending ??= api.demo();
         const res = await pending;
@@ -26,11 +27,11 @@ export default function DemoBoot({ fresh = false }: { fresh?: boolean }) {
         await store.save(res.run);
         try { localStorage.setItem(`sz_suggest_${res.run.id}`, JSON.stringify(res.suggested_events ?? [])); } catch { /* без подсказок */ }
         try { localStorage.setItem(KEY, res.run.id); } catch { /* только на эту сессию */ }
-        if (alive) nav(`/console/run/${res.run.id}`, { replace: true });
+        if (alive) nav(`/console/run/${res.run.id}${search}`, { replace: true });
       } catch (e) { if (alive) setError((e as Error).message); }
     })();
     return () => { alive = false; };
-  }, [fresh, nav]);
+  }, [fresh, nav, search]);
 
   return (
     <div>

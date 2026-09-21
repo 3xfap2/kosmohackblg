@@ -98,3 +98,14 @@ code, .mono { font-family: var(--font-mono); font-feature-settings: "zero" 1; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
 }
+
+/* ---------- Термины с подсказкой ---------- */
+.term { position: relative; text-decoration: underline dotted rgba(255,255,255,0.35); text-underline-offset: 3px; cursor: help; }
+.term::after {
+  content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); z-index: 80; width: max-content; max-width: 280px;
+  padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line-strong); background: rgba(8,10,14,0.97);
+  font: 500 12.5px/1.45 var(--font-sans); color: var(--text); text-transform: none; letter-spacing: 0; white-space: normal;
+  box-shadow: 0 16px 40px -12px #000; opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.term:hover::after, .term:focus::after { opacity: 1; transform: none; }

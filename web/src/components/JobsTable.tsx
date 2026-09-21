@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { JobView } from "../api/types";
-import { GROUP, LOSS, STATUS, clock, usd } from "../format";
+import { GROUP, KIND, LOSS, STATUS, clock, usd } from "../format";
+import { Term } from "../glossary";
 
 const DOT: Record<string, string> = {
   completed: "var(--ok)", missed: "var(--bad)", in_progress: "var(--info)", open: "var(--text-muted)", waiting: "var(--text-faint)",
@@ -39,13 +40,13 @@ export default function JobsTable({ jobs, onPick, picked }: {
       <div className="table-wrap">
         <table className="table">
           <thead>
-            <tr><th>Задание</th><th>Тип</th><th>P</th><th>Окно</th><th>Работа</th><th>Стоимость</th><th>Исполнители</th><th>Итог / причина</th></tr>
+            <tr><th>Задание</th><th>Тип</th><th><Term k="p3">Приоритет</Term></th><th>Окно</th><th>Работа</th><th>Стоимость</th><th>Исполнители</th><th>Итог / причина</th></tr>
           </thead>
           <tbody>
             {rows.slice(0, 300).map((j) => (
               <tr key={j.id} className={picked === j.id ? "picked" : ""} onClick={() => onPick(j.id)}>
                 <td><span className="id">{j.id}</span>{j.source !== "plan" && <span className="tag">{j.source}</span>}</td>
-                <td className="mono">{j.kind}</td>
+                <td>{KIND[j.kind] ?? j.kind}</td>
                 <td className="mono">{j.priority}</td>
                 <td className="mono muted">{clock(j.release_step)}–{clock(j.deadline_step)}</td>
                 <td className="mono">{j.done_steps}/{j.work_steps}</td>
