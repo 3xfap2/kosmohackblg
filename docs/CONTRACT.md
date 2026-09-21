@@ -17,7 +17,7 @@ experiments/  генератор results/ (детерминированно, ф�
 
 ```ts
 type Goal = "priority" | "revenue";
-type Algorithm = "horizon-cpsat" | "edf-baseline";
+type Algorithm = "horizon-cpsat" | "goal-greedy" | "edf-baseline";   // основной | эвристика по цели | простое правило
 
 // Задание в формате описания данных (раздел «Задания»).
 interface Job {

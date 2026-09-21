@@ -27,7 +27,7 @@ import copy
 from ortools.sat.python import cp_model
 
 from .base import Admission, Planner
-from .edf import EDFPlanner
+from .greedy import GoalGreedyPlanner
 from .physics import forecast
 
 SCALE = 100          # единица энергии в модели — 0,01 Вт·ч
@@ -36,7 +36,7 @@ MILLS = 1000         # единица целевой функции — 0,001 д
 
 class HorizonPlanner(Planner):
     name = "horizon-cpsat"
-    version = "1.2"
+    version = "1.3"
     defaults = {"horizon": 48, "replan_every": 6, "deterministic_limit": 0.05, "workers": 1,
                 "energy_value_usd_per_wh": 0.5, "seed": 7}
 
@@ -106,7 +106,7 @@ class HorizonPlanner(Planner):
                 or len(session.events) != self.seen_events or self.plan_goal != self.goal):
             self._solve(session)
         if self.last_solve.get("fallback"):
-            fb = EDFPlanner(self.goal)
+            fb = GoalGreedyPlanner(self.goal)
             actions = fb.decide(session)
             self.last_notes = {sid: "fallback_" + r for sid, r in fb.last_notes.items()}
             return actions
@@ -140,6 +140,12 @@ class HorizonPlanner(Planner):
                            for f in s["failures"])
 
         m = cp_model.CpModel()
+        # План эвристики по цели на том же окне: подсказка решателю (поиск стартует с хорошего
+        # решения, а не с «все ждут») и эталон для страховки после решения.
+        baseline_plan, baseline_score = self._rollout(session, k1, None)
+
+        def hinted(sid: str, t: int) -> dict:
+            return baseline_plan.get(t, {}).get(sid) or {"action": "idle"}
         fc = {sid: forecast(s, sid, k0, k1, env.state[sid]["temp_c"]) for sid in env.sats}
         avail = {sid: [available(sid, t) for t in steps] for sid in env.sats}
 
@@ -171,7 +177,7 @@ class HorizonPlanner(Planner):
             per_t: dict[int, list] = {}
             for sid, t in cells:
                 v = m.NewBoolVar(f"x_{sid}_{j['id']}_{t}")
-                m.AddHint(v, 0)
+                m.AddHint(v, int(hinted(sid, t).get("job_id") == j["id"]))
                 x[(sid, j["id"], t)] = v
                 vs.append(v)
                 per_t.setdefault(t, []).append(v)
@@ -180,7 +186,7 @@ class HorizonPlanner(Planner):
                 if len(group) > 1:
                     m.AddAtMostOne(group)
             y = m.NewBoolVar(f"y_{j['id']}")
-            m.AddHint(y, 0)
+            m.AddHint(y, int(sum(hinted(sid, t).get("job_id") == j["id"] for sid, t in cells) >= j["remaining_steps"]))
             m.Add(sum(vs) <= j["remaining_steps"])
             m.Add(sum(vs) >= j["remaining_steps"] * y)
             job_vars[j["id"]] = y
@@ -208,12 +214,15 @@ class HorizonPlanner(Planner):
                         and pay_lo <= f["end_temp"][i]["calibrate"] <= pay_hi):
                     c = m.NewBoolVar(f"c_{sid}_{t}")
                     cal[(sid, t)] = c
-                    m.AddHint(c, 0)
+                    m.AddHint(c, int(hinted(sid, t)["action"] == "calibrate"))
                 acts = rel + dl + ([c] if c is not None else [])
                 if len(acts) > 1:
                     m.AddAtMostOne(acts)
                 nxt = m.NewIntVar(lo_e, cap, f"e_{sid}_{t + 1}")
-                idle_energy = max(lo_e, min(cap, idle_energy + d["idle"]))
+                h = hinted(sid, t)
+                h_kind = "calibrate" if h["action"] == "calibrate" else (
+                    env.jobs[h["job_id"]]["kind"] if h["action"] == "job" and h["job_id"] in env.jobs else "idle")
+                idle_energy = max(lo_e, min(cap, idle_energy + d[h_kind]))
                 m.AddHint(nxt, idle_energy)
                 flow = d["idle"] + (d["relay"] - d["idle"]) * sum(rel) + (d["downlink"] - d["idle"]) * sum(dl)
                 if c is not None:
@@ -277,10 +286,9 @@ class HorizonPlanner(Planner):
             "planned_completions": sum(solver.Value(y) for y in job_vars.values()) if ok else 0,
             "wall_s": round(solver.WallTime(), 3),
         }
-        # Короткий поиск может вернуть слабое допустимое решение. Сравнение
+        # Короткий поиск может вернуть слабое допустимое решение. Сравнение с эвристикой
         # выполняется на одной копии текущего состояния и одних известных условиях.
         if ok:
-            baseline_plan, baseline_score = self._rollout(session, k1, None)
             _, candidate_score = self._rollout(session, k1, self.plan)
             use_baseline = baseline_score >= candidate_score
             self.last_solve["baseline_guard"] = use_baseline
@@ -293,7 +301,7 @@ class HorizonPlanner(Planner):
     def _rollout(self, session, stop, plan):
         # История не нужна прогнозу и не должна копироваться на каждом окне.
         shadow = copy.deepcopy(session, {id(session.env.trace): [], id(session.commands): []})
-        baseline = EDFPlanner(self.goal)
+        baseline = GoalGreedyPlanner(self.goal)
         actions_by_step = {}
         while shadow.env.k < stop:
             step = shadow.env.k

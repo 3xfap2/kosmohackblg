@@ -121,10 +121,10 @@ export default function Setup() {
           ))}
         </div>
         <div className="form-row">
-          {(["horizon-cpsat", "edf-baseline"] as Algorithm[]).map((a) => (
+          {(["horizon-cpsat", "goal-greedy", "edf-baseline"] as Algorithm[]).map((a) => (
             <button key={a} className={"choice" + (algorithm === a ? " on" : "")} onClick={() => setAlgorithm(a)}>
               <b>{ALGO[a]}</b>
-              <span className="muted small">{a === "horizon-cpsat" ? "Планирует на 4 часа вперёд с учётом заряда и тени" : "Базовое правило для сравнения"}</span>
+              <span className="muted small">{a === "horizon-cpsat" ? "Основной: эвристика, которую CP-SAT улучшает на 4 часа вперёд с учётом заряда и тени" : a === "goal-greedy" ? "Быстрая: порядок по цели, отсечка безнадёжных, калибровка заранее" : "Простое правило для сравнения: ближайший срок"}</span>
             </button>
           ))}
         </div>

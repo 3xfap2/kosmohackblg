@@ -47,7 +47,8 @@ export const GOAL: Record<string, string> = {
 };
 
 export const ALGO: Record<string, string> = {
-  "horizon-cpsat": "CP-SAT, окно планирования",
+  "horizon-cpsat": "Эвристика + CP-SAT на 4 часа вперёд",
+  "goal-greedy": "Эвристика по цели (без CP-SAT)",
   "edf-baseline": "Простое правило: ближайший срок",
 };
 

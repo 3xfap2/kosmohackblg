@@ -22,7 +22,7 @@ BUDGET_S = float(os.environ.get("SOZVEZDIE_STEP_BUDGET_S", "240"))
 app = FastAPI(title="Созвездие API", version="1.0")
 
 Goal = Literal["priority", "revenue"]
-Algorithm = Literal["horizon-cpsat", "edf-baseline"]
+Algorithm = Literal["horizon-cpsat", "goal-greedy", "edf-baseline"]
 Record = dict[str, Any]
 
 

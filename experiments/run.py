@@ -67,7 +67,7 @@ def main():
         if not any(file.stem.startswith(x) for x in args.scenarios):
             continue
         scenario = load(file)
-        for algorithm in ("edf-baseline", "horizon-cpsat"):
+        for algorithm in ("edf-baseline", "goal-greedy", "horizon-cpsat"):
             for goal in ("priority", "revenue"):
                 key = f"{file.stem}__{algorithm}__{goal}"
                 result, stats, elapsed = episode(scenario, algorithm, goal)

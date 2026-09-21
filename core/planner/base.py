@@ -86,6 +86,8 @@ def make_planner(name: str, goal: str = "priority", **params: Any) -> Planner:
 
 
 from .edf import EDFPlanner  # noqa: E402
+from .greedy import GoalGreedyPlanner  # noqa: E402
 from .horizon import HorizonPlanner  # noqa: E402
 
-PLANNERS = {EDFPlanner.name: EDFPlanner, HorizonPlanner.name: HorizonPlanner}
+PLANNERS = {EDFPlanner.name: EDFPlanner, GoalGreedyPlanner.name: GoalGreedyPlanner,
+            HorizonPlanner.name: HorizonPlanner}

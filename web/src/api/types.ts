@@ -1,7 +1,7 @@
 // Типы из docs/CONTRACT.md. Меняются только вместе с контрактом.
 
 export type Goal = "priority" | "revenue";
-export type Algorithm = "horizon-cpsat" | "edf-baseline";
+export type Algorithm = "horizon-cpsat" | "goal-greedy" | "edf-baseline";
 
 export interface Job {
   id: string; kind: "relay" | "downlink";
