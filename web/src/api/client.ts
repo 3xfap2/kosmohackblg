@@ -1,6 +1,7 @@
 import type {
   Algorithm, Comparison, Explanation, Goal, JobView, RunRecord, RunResponse, RunView,
   ScenarioInfo, ScenarioSource, StepRow, Timeline,
+  Forecast, Frontier, Impact, Link, Passport, Report, Stress, WhatIf, WhyNot,
 } from "./types";
 
 // Тот же домен: на Vercel /api — Python-функция, локально — прокси Vite.
@@ -47,6 +48,17 @@ export const api = {
     req<Explanation>("/api/runs/explain", { run, ...p }),
   compare: (a: RunRecord, b: RunRecord) => req<Comparison>("/api/compare", { a, b }),
   export: (run: RunRecord, include_trace = false) => req<unknown>("/api/runs/export", { run, include_trace }),
+  f: {
+    impact: (run: RunRecord, event: unknown) => req<Impact>("/api/features/impact", { run, event }),
+    forecast: (run: RunRecord) => req<Forecast>("/api/features/forecast", { run }),
+    whyNot: (run: RunRecord, job_id: string) => req<WhyNot>("/api/features/why-not", { run, job_id }),
+    whatIf: (run: RunRecord) => req<WhatIf>("/api/features/what-if", { run }),
+    frontier: (run: RunRecord) => req<Frontier>("/api/features/frontier", { run }),
+    stress: (run: RunRecord, runs = 12) => req<Stress>("/api/features/stress", { run, runs }),
+    link: (run: RunRecord) => req<Link>("/api/features/link", { run }),
+    passport: (run: RunRecord, satellite_id: string) => req<Passport>("/api/features/passport", { run, satellite_id }),
+    report: (run: RunRecord) => req<Report>("/api/features/report", { run }),
+  },
   demo: () => req<RunResponse>("/api/demo", {}),
   aiStatus: () => req<{ enabled: boolean; model: string | null }>("/api/ai/status"),
   ask: (run: RunRecord, question: string) =>

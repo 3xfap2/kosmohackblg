@@ -4,6 +4,9 @@ import { advanceUntil, api } from "../api/client";
 import { store } from "../api/store";
 import type { Algorithm, EventRecord, Goal, JobView, RunRecord, RunView, Timeline } from "../api/types";
 import ChatWidget from "../components/ChatWidget";
+import ForecastCard from "../features/ForecastCard";
+import ReportModal from "../features/ReportModal";
+import Research from "../features/Research";
 import EventComposer from "../components/EventComposer";
 import RunDashboard from "../components/RunDashboard";
 import { fromTimeline } from "../lib/cells";
@@ -21,6 +24,7 @@ export default function LiveRun() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"control" | "event">("control");
+  const [report, setReport] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const suggestions = useMemo<EventRecord[]>(() => {
     try { return JSON.parse(localStorage.getItem(`sz_suggest_${id}`) ?? "[]"); } catch { return []; }
@@ -95,6 +99,8 @@ export default function LiveRun() {
 
   const board = useMemo(() => (timeline ? fromTimeline(timeline) : null), [timeline]);
   const explain = useCallback((jobId: string) => api.explain(run!, { job_id: jobId }), [run]);
+  const whyNot = useCallback((jobId: string) => api.f.whyNot(run!, jobId), [run]);
+  const passport = useCallback((sid: string) => api.f.passport(run!, sid), [run]);
 
   if (error && !view) return <p className="error">{error}</p>;
   if (!run || !view || !board) return <p className="muted">Загрузка смены…</p>;
@@ -139,12 +145,14 @@ export default function LiveRun() {
           <h4>Результат</h4>
           <div className="row"><button className="btn" disabled={!!busy} onClick={download}>Скачать выгрузку JSON</button>
             <button className="btn" onClick={() => nav(`/console/compare?a=${run.id}`)}>Сравнить…</button></div>
+          <div className="row"><button className="btn" disabled={k === 0} onClick={() => setReport(true)}>Отчёт о передаче смены</button></div>
         </>
       ) : (
         <EventComposer run={run} suggestions={suggestions} step={k} steps={total} satellites={board.satellites} busy={!!busy}
           usedIds={[...view.events.map((e) => e.id)]} onSend={sendEvent} />
       )}
     </section>
+    <ForecastCard run={run} />
   </>);
 
   return (
@@ -158,7 +166,10 @@ export default function LiveRun() {
         </div>
         <div className="bar-step mono">шаг {k}/{total} · {clock(k)}{done ? " · смена завершена" : ""}</div>
       </div>
-      <RunDashboard view={view} jobs={jobs} board={board} explain={explain} side={side} />
+      <RunDashboard view={view} jobs={jobs} board={board} explain={explain} side={side}
+        after={k > 0 ? <Research run={run} /> : undefined}
+        whyNot={whyNot} passport={passport} />
+      {report && <ReportModal run={run} onClose={() => setReport(false)} />}
       {k > 0 && <ChatWidget run={run} />}
     </>
   );

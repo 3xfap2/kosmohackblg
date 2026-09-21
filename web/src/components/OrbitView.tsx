@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { EventRecord } from "../api/types";
+import type { EventRecord, Passport } from "../api/types";
 import type { Board, Cell } from "../lib/cells";
 import { REASON, clock } from "../format";
 
@@ -15,6 +15,7 @@ interface Props {
   onStep: (k: number) => void;
   selected?: string;
   onSelect?: (sid: string) => void;
+  passport?: (sid: string) => Promise<Passport>;
 }
 
 type State = "relay" | "downlink" | "calibrate" | "idle" | "down" | "rejected";
@@ -66,7 +67,7 @@ function stars(n: number, w: number, h: number) {
   return Array.from({ length: n }, () => ({ x: rnd() * w, y: rnd() * h, r: rnd() * 1.1 + 0.2, a: rnd() * 0.5 + 0.15, tw: rnd() * 6 }));
 }
 
-export default function OrbitView({ board, events, step, onStep, selected, onSelect }: Props) {
+export default function OrbitView({ board, events, step, onStep, selected, onSelect, passport }: Props) {
   const steps = board.steps;
   const last = Math.max(board.executed - 1, 0);
   const ref = useRef<HTMLCanvasElement>(null);
@@ -75,6 +76,13 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
   const [hover, setHover] = useState<{ sid: string; x: number; y: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [cardOpen, setCardOpen] = useState(false);   // карточка — только по явному клику
+  const [pass, setPass] = useState<Passport | null>(null);
+  useEffect(() => {
+    if (!cardOpen || !selected || !passport) { setPass(null); return; }
+    let live = true;
+    passport(selected).then((p) => live && setPass(p)).catch(() => live && setPass(null));
+    return () => { live = false; };
+  }, [cardOpen, selected, passport]);
   // Колесо приближает карту только после клика по ней — иначе страница прокручивается как обычно.
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);
@@ -381,6 +389,16 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
               {sel?.rejected && <><dt>Отказ</dt><dd className="error">{REASON[sel.reason ?? ""] ?? sel.reason}</dd></>}
               <dt>Дальше</dt><dd>{nextBusy ? <>{clock(nextBusy.step)} · {nextBusy.executed === "calibrate" ? "калибровка" : <span className="id">{nextBusy.job_id}</span>}</> : "до конца смены без работы"}</dd>
             </dl>
+            {pass && (
+              <div className="passport">
+                <span><b className="mono">{pass.soc_depth_pct ?? "—"}%</b>глубина разряда</span>
+                <span><b className="mono">{pass.job_steps}</b>шагов работы</span>
+                <span><b className="mono">{pass.heater_steps}</b>шагов обогрева</span>
+                <span><b className="mono">{pass.calibrations.length}</b>калибровок</span>
+                <span><b className="mono">{pass.below_reserve_steps}</b>ниже резерва</span>
+                <span><b className="mono">{clock(pass.calibration_due_step)}</b>калибровка до</span>
+              </div>
+            )}
             <Spark cells={selHistory} />
             <p className="muted tiny">Заряд за последние 3 часа до {clock(k)}</p>
           </div>

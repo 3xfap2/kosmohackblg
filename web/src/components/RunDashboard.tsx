@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Explanation, JobView, RunView } from "../api/types";
+import type { Explanation, JobView, Passport, RunView, WhyNot } from "../api/types";
 import type { Board } from "../lib/cells";
 import { clock, pct, usd } from "../format";
 import ExplainPanel from "./ExplainPanel";
@@ -9,10 +9,11 @@ import OrbitView from "./OrbitView";
 import SocChart from "./SocChart";
 
 // Общая панель смены: одинаково для демо и живого запуска. Все числа — из RunView ядра.
-export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side }: {
+export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side, after, whyNot, passport }: {
   view: RunView; jobs: JobView[]; board: Board;
   explain: (jobId: string) => Promise<Explanation>;
-  initialStep?: number; side?: ReactNode;
+  initialStep?: number; side?: ReactNode; after?: ReactNode;
+  whyNot?: (jobId: string) => Promise<WhyNot>; passport?: (sid: string) => Promise<Passport>;
 }) {
   const [sat, setSat] = useState(board.satellites[0] ?? "S01");
   const [cursor, setCursor] = useState(initialStep ?? Math.max(board.executed - 1, 0));
@@ -51,7 +52,7 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
         <main>
           <section className="card">
             <div className="card-head"><h2>Группировка в момент {clock(cursor)}</h2></div>
-            <OrbitView board={board} events={v.events} step={cursor} onStep={setCursor} selected={sat} onSelect={setSat} />
+            <OrbitView board={board} events={v.events} step={cursor} onStep={setCursor} selected={sat} onSelect={setSat} passport={passport} />
           </section>
 
           <section className="card">
@@ -84,13 +85,14 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
             <div className="card-head"><h2>Задания</h2></div>
             <JobsTable jobs={jobs} onPick={setPicked} picked={picked} />
           </section>
+          {after}
         </main>
 
         <aside>
           {side}
           <section className="card">
             <h2>Почему?</h2>
-            <ExplainPanel e={explanation} />
+            <ExplainPanel e={explanation} whyNot={whyNot} missed={jobs.find((j) => j.id === picked)?.status === "missed"} />
           </section>
           <section className="card">
             <h2>Сообщения смены</h2>

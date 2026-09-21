@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { EventRecord, RunRecord } from "../api/types";
+import type { EventRecord, Impact, RunRecord } from "../api/types";
+import ImpactCard from "../features/ImpactCard";
 import { clock } from "../format";
 
 // Ввод сообщения на текущей границе шага: форма для недоступности и отмены сеансов,
@@ -21,6 +22,16 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [text, setText] = useState("");
   const [drafting, setDrafting] = useState(false);
+  const [impact, setImpact] = useState<Impact | null>(null);
+  const [assessing, setAssessing] = useState(false);
+
+  // Цена события до отправки: три ветви из текущего состояния (F1 + F3).
+  const assess = async (event?: unknown) => {
+    let ev = event;
+    if (ev === undefined) { try { ev = build(); } catch (e) { setResult({ ok: false, text: `Некорректный JSON: ${(e as Error).message}` }); return; } }
+    setAssessing(true); setImpact(null); setResult(null);
+    try { setImpact(await api.f.impact(run, ev)); } catch (e) { setResult({ ok: false, text: (e as Error).message }); } finally { setAssessing(false); }
+  };
 
   // Текст → черновик JSON (ИИ). Черновик не отправляется сам: оператор проверяет и подтверждает.
   const draft = async () => {
@@ -57,10 +68,11 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
             <p><span className="id">{e.id}</span> {describe(e)}</p>
           </div>
           {e.at_step === step
-            ? <button className="btn btn-primary" disabled={busy} onClick={async () => {
+            ? <span className="row-inline"><button className="btn" disabled={assessing} onClick={() => assess(e)}>Оценить</button>
+              <button className="btn btn-primary" disabled={busy} onClick={async () => {
                 const error = await onSend(e);
                 setResult(error ? { ok: false, text: error } : { ok: true, text: `${e.id} принято — план перестроится с этого шага.` });
-              }}>Отправить</button>
+              }}>Отправить</button></span>
             : <span className="muted tiny">{e.at_step > step ? `доступно на шаге ${e.at_step}` : "момент прошёл"}</span>}
         </div>
       ))}
@@ -104,7 +116,14 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
           </label>
         </>
       )}
-      {kind !== "text" && <button className="btn btn-primary" disabled={busy} onClick={send}>{busy ? "Отправка…" : "Отправить сообщение"}</button>}
+      {kind !== "text" && (
+        <div className="row-inline">
+          <button className="btn" disabled={assessing} onClick={() => assess()}>{assessing ? "Считаю 3 ветви…" : "Оценить последствия"}</button>
+          <button className="btn btn-primary" disabled={busy} onClick={send}>{busy ? "Отправка…" : "Отправить"}</button>
+        </div>
+      )}
+      {assessing && <div className="skeleton" />}
+      {impact && <ImpactCard r={impact} />}
       {result && <p className={result.ok ? "ok-text" : "error"}>{result.text}</p>}
     </div>
   );

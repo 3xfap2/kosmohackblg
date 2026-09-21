@@ -128,3 +128,38 @@ export interface RunRecord {
 }
 
 export interface RunResponse { run: RunRecord; view: RunView; error?: string | null; suggested_events?: EventRecord[] }
+
+// ---------- Функции О7 (core/features.py) ----------
+export interface BranchScore {
+  p3_due: number; p3_done: number; jobs_due: number; jobs_done: number;
+  revenue_usd: number; below_reserve_steps: number; blocked_commands: number;
+}
+export interface BriefJob { id: string; priority: number; value_usd: number; kind: string; done?: boolean }
+export interface ScoreDelta { p3_done: number; jobs_done: number; revenue_usd: number; below_reserve_steps: number }
+export interface Impact {
+  from_step: number; until_step: number; algorithm: string; event_id: string;
+  without_event: BranchScore; replanned: BranchScore; old_plan: BranchScore;
+  cost_of_event: ScoreDelta; saved_by_replanning: ScoreDelta;
+  new_jobs: BriefJob[]; displaced: BriefJob[]; saved_jobs: BriefJob[]; note: string;
+}
+export interface Alert { kind: "energy" | "p3" | "calibration"; severity: "high" | "medium" | "low"; step: number; text: string; satellite_id?: string; job_id?: string }
+export interface Forecast { from_step: number; until_step: number; alerts: Alert[]; summary: BranchScore; note: string }
+export interface WhyNot {
+  job_id: string; verdict: "impossible" | "possible" | "not_found" | "completed";
+  proof?: { code: string; proof: string }; completed_step?: number | null; window?: [number, number];
+  displaced?: BriefJob[]; gained?: BriefJob[]; note?: string;
+}
+export interface ShiftResult { p3_done: number; p3_due: number; jobs_done: number; jobs_total: number; revenue_usd: number; below_reserve_steps: number; min_soc_pct: number }
+export interface WhatIf { goal: string; base: ShiftResult & { label: string }; variants: (ShiftResult & { label: string; kind: string; delta: { p3_done: number; jobs_done: number; revenue_usd: number } })[]; note: string }
+export interface Frontier { points: (ShiftResult & { p3_bonus_usd: number; dominated: boolean })[]; note: string }
+export interface Stress {
+  seed: number; runs: number; wins: number;
+  rows: { run: number; events: number; ours: ShiftResult; baseline: ShiftResult }[];
+  ours: Record<"p3_done" | "revenue_usd", { min: number; median: number; max: number }>;
+  baseline: Record<"p3_done" | "revenue_usd", { min: number; median: number; max: number }>; note: string;
+}
+export interface Link { steps: number; executed: number; contact_share: number; used_share_executed: number | null;
+  dark_windows: { start: number; end: number; steps: number; future: boolean }[]; longest_dark_steps: number; note: string }
+export interface Passport { satellite_id: string; capacity_wh: number; soc_now_pct: number; soc_min_pct: number | null; soc_depth_pct: number | null;
+  below_reserve_steps: number; heater_steps: number; job_steps: number; calibrations: number[]; rejected: number; calibration_due_step: number; temp_now_c: number }
+export interface Report { markdown: string }
