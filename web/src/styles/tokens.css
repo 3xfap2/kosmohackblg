@@ -1,0 +1,27 @@
+/* Токены — docs/DESIGN.md (Resend, адаптация «Созвездие»). */
+:root {
+  --bg: #000000;
+  --surface: #0b0e14;
+  --line: #292d30;
+  --text-strong: #ffffff;
+  --text: #f0f0f0;
+  --text-muted: #a1a4a5;
+  --text-faint: #6e727a;
+  --id: #9281f7;
+  --action: #3b9eff;
+
+  --ok: #3ad389;
+  --info: #70b8ff;
+  --relay: #baa7ff;
+  --warn: #ffca16;
+  --bad: #ff9592;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Inter Tight", "Inter", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --r-sm: 6px;
+  --r-lg: 16px;
+  --page: 1200px;
+}

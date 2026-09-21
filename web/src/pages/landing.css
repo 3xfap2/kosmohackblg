@@ -1,0 +1,18 @@
+.landing { max-width: var(--page); margin: 0 auto; padding: 0 24px 64px; }
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+.nav nav { display: flex; gap: 24px; font-size: 14px; }
+.nav nav a:hover { color: var(--text-strong); }
+.brand { font: 500 18px var(--font-display); color: var(--text-strong); letter-spacing: -0.02em; }
+.hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center; min-height: 72vh; }
+.hero h1 { font: 400 clamp(40px, 6vw, 80px)/1 var(--font-serif); letter-spacing: -0.01em; color: var(--text-strong); margin: 16px 0 24px; }
+.eyebrow { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.lead { font-size: 18px; max-width: 34em; margin-bottom: 32px; }
+.hero-art { aspect-ratio: 1; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 96px 0; }
+.grid3 h3 { font: 500 20px var(--font-display); color: var(--text-strong); margin: 0 0 8px; }
+.proof p { margin: 4px 0; font-size: 14px; }
+footer { margin-top: 96px; font-size: 14px; }
+@media (max-width: 800px) {
+  .hero, .grid3 { grid-template-columns: 1fr; }
+  .nav nav { display: none; }
+}
