@@ -15,6 +15,11 @@ class EDFPlanner(Planner):
     name = "edf-baseline"
     version = "1.0"
 
+    def __init__(self, goal="priority", **params):
+        if params:
+            raise ValueError("EDF не принимает дополнительные настройки")
+        super().__init__(goal)
+
     def decide(self, session) -> dict[str, dict]:
         env = session.env
         k = env.k

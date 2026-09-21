@@ -31,6 +31,13 @@ class Planner:
         return {"algorithm": self.name, "version": self.version, "goal": self.goal,
                 "parameters": dict(self.params)}
 
+    def to_state(self) -> dict:
+        return {}
+
+    def from_state(self, state: dict) -> None:
+        if state != {}:
+            raise ValueError("Некорректное состояние EDF")
+
     def decide(self, session) -> dict[str, dict]:
         raise NotImplementedError
 
