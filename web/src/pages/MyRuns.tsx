@@ -1,0 +1,95 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { store } from "../api/store";
+import type { RunRecord } from "../api/types";
+import { ALGO, GOAL, clock } from "../format";
+
+// Все смены из браузера: ветви под своими родителями, открыть / сравнить две / удалить.
+export default function MyRuns() {
+  const nav = useNavigate();
+  const [runs, setRuns] = useState<RunRecord[] | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  useEffect(() => { store.all().then(setRuns); }, []);
+
+  let demoId: string | null = null;
+  try { demoId = localStorage.getItem("sz_demo_run_v2"); } catch { /* нет хранилища */ }
+  const name = (r: RunRecord) => r.run_metadata.parent
+    ? `Ветвь от ${clock(r.run_metadata.parent.fork_step)}`
+    : r.id === demoId ? "Демо-смена" : `Смена ${"ref" in r.scenario ? r.scenario.ref : "своя"}`;
+
+  // Порядок дерева: корень, затем его ветви по времени развилки (ветви без родителя в списке — как корни).
+  const all = runs ?? [];
+  const ids = new Set(all.map((r) => r.id));
+  const kids = (id: string | null) => all
+    .filter((r) => (r.run_metadata.parent && ids.has(r.run_metadata.parent.run_id) ? r.run_metadata.parent.run_id : null) === id)
+    .sort((a, b) => (a.run_metadata.parent?.fork_step ?? 0) - (b.run_metadata.parent?.fork_step ?? 0));
+  const tree: { r: RunRecord; depth: number }[] = [];
+  const walk = (id: string | null, depth: number) => kids(id).forEach((r) => { tree.push({ r, depth }); walk(r.id, depth + 1); });
+  walk(null, 0);
+
+  const toggle = (id: string) => setPicked((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p.slice(-1), id]);
+  const remove = async (r: RunRecord) => {
+    const children = all.filter((x) => x.run_metadata.parent?.run_id === r.id).length;
+    if (!confirm(`Удалить «${name(r)}»?${children ? ` Её ветви (${children}) останутся в списке.` : ""}`)) return;
+    await store.remove(r.id);
+    setPicked((p) => p.filter((x) => x !== r.id));
+    setRuns(await store.all());
+  };
+
+  return (
+    <div className="setup">
+      <div className="page-head">
+        <div>
+          <h1>Мои смены</h1>
+          <p className="muted small">Смены хранятся только в этом браузере. Отметьте две, чтобы сравнить.</p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary" disabled={picked.length !== 2}
+            onClick={() => nav(`/console/compare?a=${picked[0]}&b=${picked[1]}`)}>
+            Сравнить выбранные{picked.length ? ` (${picked.length}/2)` : ""}
+          </button>
+          <Link className="btn" to="/console/new">Новая смена</Link>
+        </div>
+      </div>
+
+      <section className="card">
+        {!runs && <div className="skeleton" />}
+        {runs && !runs.length && (
+          <div className="empty">
+            <p>Пока нет ни одной смены.</p>
+            <p className="muted small">Откройте демо-смену или настройте свою — она появится здесь.</p>
+            <div className="page-actions"><Link className="btn btn-primary" to="/console">Открыть демо-смену</Link></div>
+          </div>
+        )}
+        {runs && runs.length > 0 && (
+          <table className="table runs-table">
+            <thead><tr><th /><th>Смена</th><th>Цель</th><th>Алгоритм</th><th>Рассчитано</th><th>Сообщения</th><th /></tr></thead>
+            <tbody>
+              {tree.map(({ r, depth }) => (
+                <tr key={r.id} className={picked.includes(r.id) ? "picked" : ""} onClick={() => nav(`/console/run/${r.id}`)}>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" aria-label="Выбрать для сравнения" checked={picked.includes(r.id)} onChange={() => toggle(r.id)} />
+                  </td>
+                  <td style={{ paddingLeft: 8 + depth * 18 }}>
+                    {depth > 0 && <span className="muted">└ </span>}<b>{name(r)}</b>
+                    <div className="muted tiny mono">{"ref" in r.scenario ? r.scenario.ref : "свой сценарий"} · {r.id.slice(0, 8)}</div>
+                  </td>
+                  <td>{GOAL[r.run_metadata.goal]}</td>
+                  <td className="muted">{ALGO[r.run_metadata.algorithm]}</td>
+                  <td className="mono">
+                    <div className="mini-bar"><i style={{ width: `${(r.steps_executed / 288) * 100}%` }} /></div>
+                    {r.steps_executed >= 288 ? "смена завершена" : `до ${clock(r.steps_executed)}`}
+                  </td>
+                  <td className="mono">{r.events.length}{r.rejected_events.length ? <span className="muted"> · отклонено {r.rejected_events.length}</span> : null}</td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <button className="btn btn-sm" onClick={() => remove(r)} aria-label="Удалить смену">Удалить</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </div>
+  );
+}

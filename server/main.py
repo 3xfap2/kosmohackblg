@@ -312,7 +312,31 @@ def proof():
             "repeat_ok": sum(bool(r.get("repeat_match")) for r in checks)}
 
 
-DEMO_STOP = 144   # 12:00: два сообщения уже приняты, два следующих оператор отправляет сам
+@app.get("/api/results")
+def results():
+    """Все прогоны генератора для страницы «Результаты»: итог модели, проверки повтором,
+    статистика решателя и время. Только перекладка полей results/summary.json и results/timings.json."""
+    import json
+    if not RESULTS.exists():
+        return {"available": False, "runs": []}
+    runs = json.loads(RESULTS.read_text(encoding="utf-8"))["runs"]
+    timings_file = RESULTS.parent / "timings.json"
+    timings = json.loads(timings_file.read_text(encoding="utf-8")) if timings_file.exists() else {}
+    out = []
+    for key, r in runs.items():
+        m = r["summary"]
+        out.append({"key": key, "scenario": r["scenario_id"], "algorithm": r["algorithm"], "goal": r["goal"],
+                    "p3_done": m["critical_jobs_completed_on_time"], "p3_due": m["critical_jobs_due"],
+                    "jobs_done": m["jobs_completed"], "jobs_total": m["jobs_total"], "revenue_usd": m["revenue_usd"],
+                    "blocked": m["blocked_command_count"], "min_soc_pct": m["minimum_soc_pct"],
+                    "replay_match": r.get("replay_match"), "repeat_match": r.get("repeat_match"),
+                    "solves": r["solves"], "cpsat_selected": r["cpsat_selected_solves"],
+                    "guard": r["baseline_guard_solves"], "fallback": r["fallback_solves"],
+                    "seconds": timings.get(key)})
+    return {"available": True, "source": "results/summary.json", "runs": out}
+
+
+DEMO_STOP = 144  # 12:00: два сообщения уже приняты, два следующих оператор отправляет сам
 
 
 @app.post("/api/demo")

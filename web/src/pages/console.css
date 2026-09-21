@@ -426,3 +426,58 @@ textarea.input { resize: vertical; font-size: 12.5px; }
 .kpi:hover, .kpi:focus-within { z-index: 5; }
 .kpi:nth-child(n+4) .term::after { left: auto; right: 0; }
 @media (max-width: 1100px) { .kpi:first-child, .kpi:last-child { border-radius: 0; } }
+
+/* ---------- Мои смены / Результаты / Как это работает ---------- */
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-head h1 { margin: 0 0 6px; }
+.page-head p { margin: 0; max-width: 640px; }
+.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-sm { height: 30px; padding: 0 12px; font-size: 12.5px; }
+.empty { padding: 28px 8px; text-align: center; }
+.empty .page-actions { justify-content: center; margin-top: 12px; }
+.runs-table td { vertical-align: middle; }
+.runs-table input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--id); cursor: pointer; }
+.mini-bar { height: 4px; width: 120px; max-width: 100%; border-radius: 2px; background: #16181c; margin-bottom: 6px; overflow: hidden; }
+.mini-bar i { display: block; height: 100%; background: linear-gradient(90deg, #6d5fd6, #b4a4ff); }
+
+.seg { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 11px; gap: 2px; }
+.seg button { height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted);
+  font: 600 13px var(--font-sans); cursor: pointer; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.seg button:hover { color: var(--text-strong); }
+.seg button.on { background: var(--text-strong); color: #000; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); }
+.table-scroll { overflow-x: auto; margin: 0 -8px; padding: 0 8px; }
+.res-table tbody tr, .table.static tbody tr { cursor: default; }
+.res-table th.hl, .res-table td.hl { background: rgba(146,129,247,0.07); color: var(--text-strong); }
+.res-table tr.base td { color: var(--text-muted); }
+.res-table .pill { margin-left: 8px; }
+.duel { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; margin-top: 10px; }
+.duel > div { display: flex; flex-direction: column; gap: 4px; }
+.duel b { font-size: 28px; color: var(--text-strong); }
+.duel b.dim { color: var(--text-muted); }
+.duel > i { color: var(--text-faint); font-style: normal; }
+.duel-side { margin-left: auto; line-height: 1.7; }
+.solver-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 12px 0; }
+.solver { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.solver .mini-bar { width: 100%; margin: 0; }
+
+.loop { list-style: none; padding: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; counter-reset: none; }
+.loop li { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.loop li:not(:last-child)::after { content: "→"; position: absolute; right: -10px; top: 50%; transform: translate(50%, -50%); color: var(--text-faint); }
+.loop b { color: var(--text-strong); }
+.loop p { margin: 0; }
+.algo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.algo { display: flex; flex-direction: column; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.algo b { color: var(--text-strong); }
+.algo p { margin: 6px 0 0; line-height: 1.5; }
+.plain { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.plain b { color: var(--text-strong); }
+.limits li::marker { color: var(--warn); }
+@media (max-width: 900px) {
+  .bar-nav { overflow-x: auto; scrollbar-width: none; }
+  .bar-nav a { white-space: nowrap; }
+  .loop, .algo-grid { grid-template-columns: 1fr; }
+  .loop li:not(:last-child)::after { content: none; }
+  .duel-side { margin-left: 0; }
+}
+.res-table td:last-child, .res-table td .tiny, .res-table td:nth-child(7) { white-space: nowrap; }
