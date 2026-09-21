@@ -4,7 +4,18 @@ import { api } from "../api/client";
 import { store } from "../api/store";
 import type { Comparison, RunRecord } from "../api/types";
 import TwinOrbits from "../features/TwinOrbits";
-import { ALGO, GOAL } from "../format";
+import { ALGO, GOAL, usd } from "../format";
+
+// Показатели сравнения (core/comparison.py) — по-русски и в единицах оператора.
+const METRIC: Record<string, [string, (x: number) => string]> = {
+  critical_jobs_completed_on_time: ["Срочные (P3) в срок", String],
+  revenue_usd: ["Выручка", (x) => (x < 0 ? "−" : "") + usd(Math.abs(x))],
+  jobs_due_missed: ["Просрочено заданий", String],
+  minimum_soc_pct: ["Минимальный заряд", (x) => x.toFixed(1) + "%"],
+  below_reserve_satellite_steps: ["Ниже резерва, ап.-шагов", String],
+  work_steps_in_missed_jobs: ["Работа в сорванных заданиях, шагов", String],
+};
+const fmt = (name: string, x: number | null) => (x == null ? "—" : (METRIC[name]?.[1] ?? String)(x));
 
 // Сравнение двух запусков: вердикт ядра для выбранной цели, происхождение ветвей и различия.
 export default function Compare() {
@@ -65,10 +76,10 @@ export default function Compare() {
             <tbody>
               {cmp.metrics.map((m) => (
                 <tr key={m.name}>
-                  <td>{m.name}</td>
-                  <td className="mono">{m.a ?? "—"}</td>
-                  <td className="mono">{m.b ?? "—"}</td>
-                  <td className="mono">{m.delta == null ? "—" : (m.delta > 0 ? "+" : "") + m.delta}</td>
+                  <td>{METRIC[m.name]?.[0] ?? m.name}</td>
+                  <td className="mono">{fmt(m.name, m.a)}</td>
+                  <td className="mono">{fmt(m.name, m.b)}</td>
+                  <td className="mono">{m.delta == null ? "—" : (m.delta > 0 ? "+" : "") + fmt(m.name, m.delta)}</td>
                   <td>{m.better === "equal" ? "равно" : m.better.toUpperCase()}</td>
                 </tr>
               ))}
