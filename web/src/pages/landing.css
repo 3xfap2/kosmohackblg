@@ -40,3 +40,46 @@ footer { margin-top: 96px; font-size: 13px; }
   .hero { min-height: auto; padding: 32px 0; }
   .nav nav { display: none; }
 }
+
+/* ---------- Блоки лендинга ---------- */
+.block { margin: 72px 0 0; }
+.kicker { font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--id); margin: 0 0 8px; }
+.block h2 { font: 800 clamp(28px, 3.4vw, 42px)/1.1 var(--font-display); letter-spacing: -0.03em; color: var(--text-strong); margin: 0 0 22px; }
+.block .grid3 { margin: 0; }
+.fact { padding: 26px; }
+.fact b { display: block; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-strong); }
+.fact h3 { font: 700 18px var(--font-display); color: var(--text-strong); margin: 12px 0 8px; }
+.fact p { margin: 0; font-size: 14px; line-height: 1.6; }
+.flow { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 18px; font: 600 14px var(--font-sans); }
+.flow span { padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-strong); }
+.flow i { font-style: normal; color: var(--text-faint); }
+
+.proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.proof-card { padding: 22px; }
+.proof-card p { margin: 0; }
+.proof-nums { display: flex; align-items: flex-end; gap: 14px; margin: 14px 0 10px; }
+.proof-nums div { display: flex; flex-direction: column; gap: 4px; }
+.proof-nums b { font-size: 34px; font-weight: 600; letter-spacing: -0.03em; color: var(--text-strong); line-height: 1; }
+.proof-nums b small { font-size: 15px; color: var(--text-faint); font-weight: 500; }
+.proof-nums b.dim { color: var(--text-muted); }
+.proof-nums i { font-style: normal; color: var(--text-faint); font-size: 20px; padding-bottom: 4px; }
+.proof-meta { margin-top: 14px; color: var(--text-muted); }
+
+.shot { position: relative; display: block; border: 1px solid var(--line-strong); border-radius: 16px; overflow: hidden; background: #050607;
+  box-shadow: 0 40px 100px -40px rgba(146,129,247,0.35); transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease); }
+.shot:hover { transform: translateY(-4px); box-shadow: 0 50px 120px -40px rgba(146,129,247,0.5); }
+.shot-bar { display: flex; align-items: center; gap: 7px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.shot-bar i { width: 10px; height: 10px; border-radius: 50%; background: #2a2d31; }
+.shot-bar span { margin-left: 10px; font-size: 11.5px; color: var(--text-faint); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot-cta { position: absolute; right: 20px; bottom: 20px; opacity: 0; transform: translateY(6px); transition: opacity var(--t-med) var(--ease), transform var(--t-med) var(--ease-out); }
+.shot:hover .shot-cta { opacity: 1; transform: none; }
+.small-cards { margin-top: 14px !important; }
+.hero-art { display: flex; flex-direction: column; }
+.hero-art canvas { flex: 1; }
+.hero-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 11px; color: var(--text-muted); }
+.hero-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.hero-legend i { width: 7px; height: 7px; border-radius: 50%; }
+@media (max-width: 860px) { .proof-grid { grid-template-columns: 1fr; } }
+
+.hero-art canvas { -webkit-mask-image: radial-gradient(ellipse 70% 70% at 55% 50%, #000 55%, transparent 100%); mask-image: radial-gradient(ellipse 70% 70% at 55% 50%, #000 55%, transparent 100%); }

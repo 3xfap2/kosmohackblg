@@ -2,15 +2,16 @@ import type { BranchScore, Impact } from "../api/types";
 import { clock, usd } from "../format";
 
 // F1 + F3: три продолжения из одного состояния. Вывод формулируется словами — «что сохранено».
-const sign = (x: number) => (x > 0 ? `+${x}` : `${x}`);
+
 
 export default function ImpactCard({ r }: { r: Impact }) {
   const s = r.saved_by_replanning, c = r.cost_of_event;
   const cost = c.p3_done < 0 || c.revenue_usd < 0
     ? `Событие стоит ${-c.p3_done} заданий P3 и ${usd(-c.revenue_usd)}`
     : c.p3_done > 0 || c.revenue_usd > 0 ? `С событием выполним на ${c.p3_done} P3 больше (+${usd(c.revenue_usd)})` : "Событие не меняет итог окна";
+  const parts = [s.p3_done > 0 ? `${s.p3_done} срочных заданий` : "", s.revenue_usd > 0 ? usd(s.revenue_usd) : ""].filter(Boolean).join(" и ");
   const saved = s.p3_done > 0 || s.revenue_usd > 0
-    ? `перестройка сохранила ${sign(s.p3_done)} P3 и ${usd(s.revenue_usd)} против старого плана`
+    ? `перестройка сохранила ${parts} против старого плана`
     : s.p3_done < 0 || s.revenue_usd < 0
       ? "старый план на этом окне дал бы больше"
       : r.old_plan.blocked_commands > r.replanned.blocked_commands

@@ -350,3 +350,12 @@ textarea.input { resize: vertical; font-size: 12.5px; }
 .intervene .btn { height: 30px; font-size: 12px; padding: 0 10px; }
 .modal-body { padding: 16px 18px; overflow: auto; }
 @media (max-width: 900px) { .caption { width: calc(100% - 32px); } }
+
+/* ---------- Две ветви рядом ---------- */
+.twin { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.twin-label { margin: 0 0 8px; font-size: 13px; color: var(--text-muted); }
+.twin-label b { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 6px; background: var(--text-strong); color: #000; }
+.orbit-stage.compact .orbit-counts { transform: scale(0.82); transform-origin: top right; }
+.orbit-stage.compact .orbit-zoom { display: none; }
+.timeline .tick.fork { background: var(--warn); height: 12px; top: -11px; }
+@media (max-width: 1000px) { .twin { grid-template-columns: 1fr; } }

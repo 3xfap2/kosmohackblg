@@ -20,6 +20,7 @@ interface Props {
   onIntervene?: (sid: string, kind: "satellite_outage" | "close_downlink") => void;
   interveneStep?: number;
   shareUrl?: (step: number, sid?: string) => string | null;
+  compact?: boolean;   // для сравнения: без пояснений и собственных кнопок
 }
 
 type State = "relay" | "downlink" | "calibrate" | "idle" | "down" | "rejected";
@@ -73,7 +74,7 @@ function stars(n: number, w: number, h: number) {
   return Array.from({ length: n }, () => ({ x: rnd() * w, y: rnd() * h, r: rnd() * 1.1 + 0.2, a: rnd() * 0.5 + 0.15, tw: rnd() * 6 }));
 }
 
-export default function OrbitView({ board, events, step, onStep, selected, onSelect, passport, onIntervene, interveneStep, shareUrl }: Props) {
+export default function OrbitView({ board, events, step, onStep, selected, onSelect, passport, onIntervene, interveneStep, shareUrl, compact }: Props) {
   const steps = board.steps;
   const last = Math.max(board.executed - 1, 0);
   const ref = useRef<HTMLCanvasElement>(null);
@@ -362,12 +363,8 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
 
   return (
     <div className="orbit">
-      <p className="orbit-lead">
-        Каждая точка — спутник, цвет — чем он занят в эту минуту. Справа от Земли тень: там панели не дают
-        энергии и спутник живёт на батарее. Колесо мыши приближает, перетаскивание сдвигает, клик по спутнику
-        открывает его карточку. Приближение колесом — после клика по карте, Esc — выйти.
-      </p>
-      <div ref={stage} className={"orbit-stage" + (zoom > 1 ? " zoomed" : "") + (active ? " active" : "")}>
+      {!compact && <p className="orbit-lead">Точка — спутник, цвет — чем он занят. Слева Солнце, справа тень Земли: там нет солнечной энергии.</p>}
+      <div ref={stage} className={"orbit-stage" + (compact ? " compact" : "") + (zoom > 1 ? " zoomed" : "") + (active ? " active" : "")}>
         {hint && <div className="orbit-hint">Нажмите на карту, чтобы приближать колесом</div>}
         <canvas
           ref={ref}
@@ -475,7 +472,7 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
         )}
       </div>
 
-      <div className="orbit-controls">
+      {!compact && <><div className="orbit-controls">
         <button className="btn btn-play" disabled={last === 0} onClick={() => { if (step >= last) onStep(0); setStoryMode(false); setPlaying(!playing); }}>
           {playing && !storyMode ? "❚❚  Пауза" : "▶  Проиграть смену"}
         </button>
@@ -502,7 +499,7 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
           ))}
         </div>
       </div>
-      <p className="muted small">Схема: положение на орбите восстановлено по чередованию света и тени в данных, а не по реальной баллистике.</p>
+      <p className="muted tiny">Клик по спутнику — карточка · колесо — приближение после клика по карте · Esc — выйти. Положение схематичное: восстановлено по свету и тени в данных, не по баллистике.</p></>}
     </div>
   );
 }

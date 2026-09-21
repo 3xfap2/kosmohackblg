@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { store } from "../api/store";
 import type { Comparison, RunRecord } from "../api/types";
+import TwinOrbits from "../features/TwinOrbits";
 import { ALGO, GOAL } from "../format";
 
 // Сравнение двух запусков: вердикт ядра для выбранной цели, происхождение ветвей и различия.
@@ -70,6 +71,9 @@ export default function Compare() {
             </tbody>
           </table>
         </section>
+      )}
+      {cmp && runs.find((r) => r.id === a) && runs.find((r) => r.id === b) && (
+        <TwinOrbits key={a + b} a={runs.find((r) => r.id === a)!} b={runs.find((r) => r.id === b)!} forkStep={cmp.fork_step} />
       )}
     </div>
   );

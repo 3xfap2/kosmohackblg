@@ -4,7 +4,7 @@
   "functions": {
     "server/main.py": {
       "maxDuration": 300,
-      "includeFiles": "{data,model,core,examples,web/dist}/**"
+      "includeFiles": "{data/**,model/**,core/**,examples/**,web/dist/**,results/summary.json}"
     }
   }
 }

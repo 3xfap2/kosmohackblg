@@ -269,6 +269,42 @@ def f_report(body: RunOnly):
 DEMO_EVENTS = Path(__file__).resolve().parent.parent / "examples" / "events_demo.json"
 
 
+RESULTS = Path(__file__).resolve().parent.parent / "results" / "summary.json"
+
+
+@app.get("/api/proof")
+def proof():
+    """Числа для лендинга — только из results/summary.json (генератор experiments/run.py).
+    Здесь нет расчёта: выбор строк и перекладка полей сводки."""
+    import json
+    if not RESULTS.exists():
+        return {"available": False, "rows": [], "events": []}
+    runs = json.loads(RESULTS.read_text(encoding="utf-8"))["runs"]
+
+    def pick(key):
+        r = runs.get(key)
+        if not r:
+            return None
+        m = r["summary"]
+        return {"p3_done": m["critical_jobs_completed_on_time"], "p3_due": m["critical_jobs_due"],
+                "jobs_done": m["jobs_completed"], "jobs_total": m["jobs_total"], "revenue_usd": m["revenue_usd"],
+                "blocked": m["blocked_command_count"], "min_soc_pct": m["minimum_soc_pct"]}
+
+    rows = []
+    for scenario in ("P02_shift", "P03_energy", "P04_demand"):
+        for goal in ("priority", "revenue"):
+            row = {"scenario": scenario, "goal": goal,
+                   **{alg: pick(f"{scenario}__{alg}__{goal}") for alg in ("edf-baseline", "goal-greedy", "horizon-cpsat")}}
+            if row["edf-baseline"]:
+                rows.append(row)
+    events = [{"goal": goal, "adaptive": pick(f"P02_events__adaptive__{goal}"), "frozen": pick(f"P02_events__frozen__{goal}")}
+              for goal in ("priority", "revenue") if runs.get(f"P02_events__adaptive__{goal}")]
+    checks = [r for r in runs.values() if "replay_match" in r or "repeat_match" in r]
+    return {"available": True, "source": "results/summary.json", "rows": rows, "events": events,
+            "runs": len(runs), "replay_ok": sum(bool(r.get("replay_match")) for r in checks),
+            "repeat_ok": sum(bool(r.get("repeat_match")) for r in checks)}
+
+
 DEMO_STOP = 144   # 12:00: два сообщения уже приняты, два следующих оператор отправляет сам
 
 
