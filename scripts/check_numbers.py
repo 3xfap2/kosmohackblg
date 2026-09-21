@@ -18,7 +18,8 @@ def check(root=ROOT):
         record = json.loads((root / "results/runs" / (key + ".json")).read_text(encoding="utf-8"))
         if row["summary"] != record["summary"]:
             errors.append(f"{key}: сводка расходится с экспортом")
-    for file in [root / "README.md", *sorted((root / "docs").glob("*.md"))]:
+    for file in [root / "README.md", *sorted((root / "docs").glob("*.md")),
+                 *sorted((root / "results").glob("*.md"))]:
         content = file.read_text(encoding="utf-8")
         for match in PATTERN.finditer(content):
             count += 1

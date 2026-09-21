@@ -13,8 +13,8 @@ from model.resource_env import load
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def episode(scenario, algorithm, goal, events=(), frozen=None):
-    planner = make_planner(algorithm, goal)
+def episode(scenario, algorithm, goal, events=(), frozen=None, parameters=None):
+    planner = make_planner(algorithm, goal, **(parameters or {}))
     session = Session(scenario, {**planner.metadata(), "goal": goal,
         "goal_history": [{"step": 0, "goal": goal}], "mode": "adaptive" if frozen is None else "frozen"})
     by_step = {}
@@ -47,6 +47,9 @@ def episode(scenario, algorithm, goal, events=(), frozen=None):
         "fallback_solves": sum(x["fallback"] for x in getattr(planner, "solves", [])),
         "baseline_guard_solves": sum(x.get("baseline_guard", False) for x in getattr(planner, "solves", [])),
         "solves": len(getattr(planner, "solves", [])), "parameters": planner.params,
+        "solver_statuses": dict(Counter(x["status"] for x in getattr(planner, "solves", []))),
+        "cpsat_selected_solves": sum(not x["fallback"] and not x.get("baseline_guard", False)
+                                    for x in getattr(planner, "solves", [])),
         "algorithm_version": planner.version, "scenario_hash": digest(scenario),
         "events_hash": digest(result["events"])}
     return result, stats, elapsed
