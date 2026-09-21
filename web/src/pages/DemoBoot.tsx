@@ -5,7 +5,7 @@ import { store } from "../api/store";
 
 // Первое, что видит человек в консоли: готовая смена P02 с сообщениями организаторов.
 // Демо — обычный живой запуск: в нём работают ветви, сравнение, сообщения и чат.
-const KEY = "sz_demo_run";
+const KEY = "sz_demo_run_v2";   // v2: демо останавливается в 12:00
 let pending: ReturnType<typeof api.demo> | null = null;   // один расчёт демо, даже при двойном эффекте
 
 export default function DemoBoot({ fresh = false }: { fresh?: boolean }) {
@@ -23,6 +23,7 @@ export default function DemoBoot({ fresh = false }: { fresh?: boolean }) {
         const res = await pending;
         pending = null;
         await store.save(res.run);
+        try { localStorage.setItem(`sz_suggest_${res.run.id}`, JSON.stringify(res.suggested_events ?? [])); } catch { /* без подсказок */ }
         try { localStorage.setItem(KEY, res.run.id); } catch { /* только на эту сессию */ }
         if (alive) nav(`/console/run/${res.run.id}`, { replace: true });
       } catch (e) { if (alive) setError((e as Error).message); }

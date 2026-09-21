@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api } from "../api/client";
 import { store } from "../api/store";
-import type { Algorithm, Goal, JobView, RunRecord, RunView, Timeline } from "../api/types";
+import type { Algorithm, EventRecord, Goal, JobView, RunRecord, RunView, Timeline } from "../api/types";
 import ChatWidget from "../components/ChatWidget";
 import EventComposer from "../components/EventComposer";
 import RunDashboard from "../components/RunDashboard";
@@ -22,6 +22,9 @@ export default function LiveRun() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"control" | "event">("control");
   const abort = useRef<AbortController | null>(null);
+  const suggestions = useMemo<EventRecord[]>(() => {
+    try { return JSON.parse(localStorage.getItem(`sz_suggest_${id}`) ?? "[]"); } catch { return []; }
+  }, [id]);
 
   const refresh = useCallback(async (r: RunRecord, v?: RunView) => {
     const [vv, jj, tt] = await Promise.all([v ? Promise.resolve(v) : api.view(r), api.jobs(r), api.timeline(r)]);
@@ -105,6 +108,12 @@ export default function LiveRun() {
       </div>
       {tab === "control" ? (
         <>
+          {done && <p className="note">Смена завершена — доступны выгрузка и сравнение. Для другого варианта создайте <Link className="id" to="/console/new">новую смену</Link>.</p>}
+          {!done && suggestions.some((e) => e.at_step >= k && !view.events.some((x) => x.id === e.id)) && (
+            <button className="note note-action" onClick={() => setTab("event")}>
+              Есть сообщение из примера организаторов на {clock(Math.min(...suggestions.filter((e) => e.at_step >= k).map((e) => e.at_step)))} — открыть →
+            </button>
+          )}
           <div className="row"><button className="btn" disabled={!!busy || done} onClick={() => go(k + 1)}>+1 шаг</button>
             <button className="btn" disabled={!!busy || done} onClick={() => go(Math.min(k + 12, total))}>+1 час</button>
             <button className="btn" disabled={!!busy || done} onClick={() => go(total)}>До конца</button></div>
@@ -132,7 +141,7 @@ export default function LiveRun() {
             <button className="btn" onClick={() => nav(`/console/compare?a=${run.id}`)}>Сравнить…</button></div>
         </>
       ) : (
-        <EventComposer run={run} step={k} steps={total} satellites={board.satellites} busy={!!busy}
+        <EventComposer run={run} suggestions={suggestions} step={k} steps={total} satellites={board.satellites} busy={!!busy}
           usedIds={[...view.events.map((e) => e.id)]} onSend={sendEvent} />
       )}
     </section>

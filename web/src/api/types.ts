@@ -127,4 +127,4 @@ export interface RunRecord {
   notes: Record<string, Record<string, string>>;
 }
 
-export interface RunResponse { run: RunRecord; view: RunView; error?: string | null }
+export interface RunResponse { run: RunRecord; view: RunView; error?: string | null; suggested_events?: EventRecord[] }

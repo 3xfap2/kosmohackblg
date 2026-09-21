@@ -1,14 +1,14 @@
 .landing { max-width: var(--page); margin: 0 auto; padding: 0 24px 64px; }
 .nav { display: flex; align-items: center; justify-content: space-between; height: 72px; }
-.nav nav { display: flex; gap: 6px; font-size: 14px; }
+.nav nav { display: flex; gap: 6px; font-size: 14px; font-weight: 600; }
 .nav nav a { padding: 7px 12px; border-radius: 8px; color: var(--text-muted); transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 .nav nav a:hover { color: var(--text-strong); background: rgba(255,255,255,0.04); }
-.brand { display: inline-flex; align-items: center; gap: 10px; font: 500 17px var(--font-display); letter-spacing: -0.02em; color: var(--text-strong); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 800 18px var(--font-display); letter-spacing: -0.02em; color: var(--text-strong); }
 .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-strong); box-shadow: 0 0 0 3px rgba(255,255,255,0.08), 0 0 14px rgba(146,129,247,0.7); }
 
 .hero { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 40px; align-items: center; min-height: calc(92vh - 72px); }
-.hero h1 { font: 400 clamp(40px, 5.2vw, 72px)/1.02 var(--font-serif); letter-spacing: -0.015em; color: var(--text-strong); margin: 18px 0 22px; }
-.hero h1 em { font-style: italic; color: #cfd3ff; }
+.hero h1 { font: 800 clamp(40px, 5vw, 68px)/1.02 var(--font-display); letter-spacing: -0.035em; color: var(--text-strong); margin: 18px 0 22px; }
+.hero h1 em { font-style: normal; color: var(--text-muted); }
 .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
   border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px 6px 10px; }
 .live { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(58,211,137,0.6); animation: live 2.4s infinite; }
@@ -24,7 +24,7 @@
 .feature { padding: 28px; transition: border-color var(--t-fast) var(--ease), transform var(--t-med) var(--ease-out); }
 .feature:hover { border-color: var(--line-strong); transform: translateY(-3px); }
 .feature-n { font-size: 11px; color: var(--text-faint); }
-.feature h3 { font: 500 20px var(--font-display); letter-spacing: -0.015em; color: var(--text-strong); margin: 14px 0 8px; }
+.feature h3 { font: 700 20px var(--font-display); letter-spacing: -0.015em; color: var(--text-strong); margin: 14px 0 8px; }
 .feature p { margin: 0; font-size: 14.5px; }
 
 .terminal { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: #050607; }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { RunRecord } from "../api/types";
+import type { EventRecord, RunRecord } from "../api/types";
 import { clock } from "../format";
 
 // Ввод сообщения на текущей границе шага: форма для недоступности и отмены сеансов,
@@ -8,8 +8,8 @@ import { clock } from "../format";
 // Проверку делает модель организаторов; отказ показывается как есть, состояние не меняется.
 type Kind = "satellite_outage" | "close_downlink" | "json" | "text";
 
-export default function EventComposer({ run, step, steps, satellites, usedIds, onSend, busy }: {
-  run: RunRecord; step: number; steps: number; satellites: string[]; usedIds: string[];
+export default function EventComposer({ run, step, steps, satellites, usedIds, onSend, busy, suggestions = [] }: {
+  run: RunRecord; suggestions?: EventRecord[]; step: number; steps: number; satellites: string[]; usedIds: string[];
   onSend: (event: unknown) => Promise<string | null>; busy: boolean;
 }) {
   const nextId = () => { let n = usedIds.length + 1; while (usedIds.includes(`E-${n}`)) n++; return `E-${n}`; };
@@ -50,6 +50,20 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
 
   return (
     <div className="composer">
+      {suggestions.filter((e) => !usedIds.includes(e.id)).map((e) => (
+        <div key={e.id} className={"suggest" + (e.at_step === step ? " ready" : "")}>
+          <div>
+            <span className="mono tiny muted">пример организаторов · {clock(e.at_step)}</span>
+            <p><span className="id">{e.id}</span> {describe(e)}</p>
+          </div>
+          {e.at_step === step
+            ? <button className="btn btn-primary" disabled={busy} onClick={async () => {
+                const error = await onSend(e);
+                setResult(error ? { ok: false, text: error } : { ok: true, text: `${e.id} принято — план перестроится с этого шага.` });
+              }}>Отправить</button>
+            : <span className="muted tiny">{e.at_step > step ? `доступно на шаге ${e.at_step}` : "момент прошёл"}</span>}
+        </div>
+      ))}
       <p className="muted small">Сообщение поступит на границе шага <b className="mono">{step}</b> ({clock(step)}), до выбора действий.</p>
       <div className="filters">
         <button className={"chip" + (kind === "satellite_outage" ? " on" : "")} onClick={() => setKind("satellite_outage")}>Недоступность аппаратов</button>
@@ -94,4 +108,10 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
       {result && <p className={result.ok ? "ok-text" : "error"}>{result.text}</p>}
     </div>
   );
+}
+
+function describe(e: EventRecord): string {
+  if (e.type === "add_jobs") return `новые задания: ${e.jobs.map((j) => j.id).join(", ")}`;
+  const who = e.satellite_ids.length > 4 ? `${e.satellite_ids.length} аппаратов` : e.satellite_ids.join(", ");
+  return e.type === "satellite_outage" ? `недоступны ${who} до ${clock(e.end_step)}` : `отмена сеансов связи: ${who} до ${clock(e.end_step)}`;
 }

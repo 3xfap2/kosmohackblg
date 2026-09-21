@@ -75,6 +75,11 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
   const [hover, setHover] = useState<{ sid: string; x: number; y: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [cardOpen, setCardOpen] = useState(false);   // карточка — только по явному клику
+  // Колесо приближает карту только после клика по ней — иначе страница прокручивается как обычно.
+  const [active, setActive] = useState(false);
+  const activeRef = useRef(false);
+  const [hint, setHint] = useState(false);
+  const stage = useRef<HTMLDivElement>(null);
   const view = useRef({ zoom: 1, px: 0, py: 0 });          // для цикла отрисовки без перезапуска
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   const pos = useRef<Record<string, { x: number; y: number }>>({});
@@ -144,12 +149,23 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
   useEffect(() => {
     const c = ref.current!;
     const onWheel = (e: WheelEvent) => {
+      if (!activeRef.current) { setHint(true); window.clearTimeout(hintTimer); hintTimer = window.setTimeout(() => setHint(false), 1400); return; }
       e.preventDefault();
       const rect = c.getBoundingClientRect();
       zoomAt(e.deltaY < 0 ? 1.18 : 1 / 1.18, e.clientX - rect.left, e.clientY - rect.top);
     };
+    let hintTimer = 0;
+    const leave = (e: PointerEvent) => {
+      if (stage.current && !stage.current.contains(e.target as Node)) { activeRef.current = false; setActive(false); }
+    };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") { activeRef.current = false; setActive(false); } };
     c.addEventListener("wheel", onWheel, { passive: false });
-    return () => c.removeEventListener("wheel", onWheel);
+    document.addEventListener("pointerdown", leave);
+    document.addEventListener("keydown", esc);
+    return () => {
+      c.removeEventListener("wheel", onWheel); document.removeEventListener("pointerdown", leave);
+      document.removeEventListener("keydown", esc); window.clearTimeout(hintTimer);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Отрисовка: плавное движение к текущему шагу.
@@ -292,13 +308,15 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
       <p className="orbit-lead">
         Каждая точка — спутник, цвет — чем он занят в эту минуту. Справа от Земли тень: там панели не дают
         энергии и спутник живёт на батарее. Колесо мыши приближает, перетаскивание сдвигает, клик по спутнику
-        открывает его карточку.
+        открывает его карточку. Приближение колесом — после клика по карте, Esc — выйти.
       </p>
-      <div className={"orbit-stage" + (zoom > 1 ? " zoomed" : "")}>
+      <div ref={stage} className={"orbit-stage" + (zoom > 1 ? " zoomed" : "") + (active ? " active" : "")}>
+        {hint && <div className="orbit-hint">Нажмите на карту, чтобы приближать колесом</div>}
         <canvas
           ref={ref}
           style={{ display: "block", touchAction: "none" }}
           onPointerDown={(e) => {
+            activeRef.current = true; setActive(true); setHint(false);
             const p = local(e);
             drag.current = { x: p.x, y: p.y, px: view.current.px, py: view.current.py, moved: false };
             (e.target as HTMLElement).setPointerCapture(e.pointerId);

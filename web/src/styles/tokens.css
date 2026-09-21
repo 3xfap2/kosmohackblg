@@ -19,9 +19,9 @@
   --bad: #ff8a85;
   --action: #6cb6ff;
 
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Inter Tight", "Inter", sans-serif;
-  --font-serif: "Playfair Display", Georgia, serif;
+  /* Onest — гротеск, сделанный под кириллицу; плотные начертания 600–800 для заголовков */
+  --font-sans: "Onest", system-ui, sans-serif;
+  --font-display: "Onest", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --r-sm: 8px;
