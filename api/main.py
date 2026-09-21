@@ -12,6 +12,7 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from api import ai
 from core import service
 from core.errors import InputError, NotFound
 
@@ -175,6 +176,29 @@ def export(body: Export):
 @app.post("/api/replay")
 def replay(result: dict = Body(...)):
     return call(service.replay, result)
+
+
+class Ask(RunOnly):
+    question: str = Field(..., max_length=500)
+
+
+class Draft(RunOnly):
+    text: str = Field(..., max_length=500)
+
+
+@app.get("/api/ai/status")
+def ai_status():
+    return {"enabled": ai.enabled(), "model": ai.MODEL if ai.enabled() else None}
+
+
+@app.post("/api/ai/ask")
+def ai_ask(body: Ask):
+    return call(ai.ask, body.run, body.question)
+
+
+@app.post("/api/ai/event")
+def ai_event(body: Draft):
+    return call(ai.draft_event, body.run, body.text)
 
 
 @app.get("/api/health")

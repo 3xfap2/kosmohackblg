@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { api } from "../api/client";
+import type { RunRecord } from "../api/types";
 import { clock } from "../format";
 
 // Ввод сообщения на текущей границе шага: форма для недоступности и отмены сеансов,
 // JSON (вставка или файл) — для любого типа, включая пакет новых заданий.
 // Проверку делает модель организаторов; отказ показывается как есть, состояние не меняется.
-type Kind = "satellite_outage" | "close_downlink" | "json";
+type Kind = "satellite_outage" | "close_downlink" | "json" | "text";
 
-export default function EventComposer({ step, steps, satellites, usedIds, onSend, busy }: {
-  step: number; steps: number; satellites: string[]; usedIds: string[];
+export default function EventComposer({ run, step, steps, satellites, usedIds, onSend, busy }: {
+  run: RunRecord; step: number; steps: number; satellites: string[]; usedIds: string[];
   onSend: (event: unknown) => Promise<string | null>; busy: boolean;
 }) {
   const nextId = () => { let n = usedIds.length + 1; while (usedIds.includes(`E-${n}`)) n++; return `E-${n}`; };
@@ -17,6 +19,19 @@ export default function EventComposer({ step, steps, satellites, usedIds, onSend
   const [end, setEnd] = useState(Math.min(step + 12, steps));
   const [json, setJson] = useState("");
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [text, setText] = useState("");
+  const [drafting, setDrafting] = useState(false);
+
+  // Текст → черновик JSON (ИИ). Черновик не отправляется сам: оператор проверяет и подтверждает.
+  const draft = async () => {
+    setDrafting(true); setResult(null);
+    try {
+      const r = await api.draftEvent(run, text);
+      if (r.event) { setJson(JSON.stringify(r.event, null, 2)); setKind("json");
+        setResult({ ok: true, text: "Черновик готов — проверьте JSON и нажмите «Отправить»." + (r.note ? ` ${r.note}` : "") }); }
+      else setResult({ ok: false, text: r.error ?? "Не удалось разобрать сообщение." });
+    } catch (e) { setResult({ ok: false, text: (e as Error).message }); } finally { setDrafting(false); }
+  };
 
   const build = (): unknown => {
     if (kind === "json") return JSON.parse(json);
@@ -40,9 +55,16 @@ export default function EventComposer({ step, steps, satellites, usedIds, onSend
         <button className={"chip" + (kind === "satellite_outage" ? " on" : "")} onClick={() => setKind("satellite_outage")}>Недоступность аппаратов</button>
         <button className={"chip" + (kind === "close_downlink" ? " on" : "")} onClick={() => setKind("close_downlink")}>Отмена сеансов связи</button>
         <button className={"chip" + (kind === "json" ? " on" : "")} onClick={() => setKind("json")}>JSON / новые задания</button>
+        <button className={"chip" + (kind === "text" ? " on" : "")} onClick={() => setKind("text")}>Текстом (ИИ)</button>
       </div>
 
-      {kind === "json" ? (
+      {kind === "text" ? (
+        <>
+          <textarea className="input" rows={3} value={text} onChange={(e) => setText(e.target.value)}
+            placeholder="Например: S08 и S10 недоступны до 07:30" />
+          <button className="btn" disabled={drafting || !text.trim()} onClick={draft}>{drafting ? "Разбор…" : "Составить черновик"}</button>
+        </>
+      ) : kind === "json" ? (
         <>
           <textarea className="input mono" rows={8} value={json} onChange={(e) => setJson(e.target.value)}
             placeholder={`{"id": "E-NEW", "at_step": ${step}, "type": "add_jobs", "jobs": [ … ]}`} />
@@ -68,7 +90,7 @@ export default function EventComposer({ step, steps, satellites, usedIds, onSend
           </label>
         </>
       )}
-      <button className="btn btn-primary" disabled={busy} onClick={send}>{busy ? "Отправка…" : "Отправить сообщение"}</button>
+      {kind !== "text" && <button className="btn btn-primary" disabled={busy} onClick={send}>{busy ? "Отправка…" : "Отправить сообщение"}</button>}
       {result && <p className={result.ok ? "ok-text" : "error"}>{result.text}</p>}
     </div>
   );

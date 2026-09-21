@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api } from "../api/client";
 import { store } from "../api/store";
 import type { Algorithm, Goal, JobView, RunRecord, RunView, Timeline } from "../api/types";
+import AskPanel from "../components/AskPanel";
 import EventComposer from "../components/EventComposer";
 import RunDashboard from "../components/RunDashboard";
 import { fromTimeline } from "../lib/cells";
@@ -96,7 +97,7 @@ export default function LiveRun() {
   if (!run || !view || !board) return <p className="muted">Загрузка смены…</p>;
   const total = view.steps_total, k = run.steps_executed, done = k >= total;
 
-  const side = (
+  const side = (<>
     <section className="card control">
       <div className="filters">
         <button className={"chip" + (tab === "control" ? " on" : "")} onClick={() => setTab("control")}>Управление</button>
@@ -131,11 +132,12 @@ export default function LiveRun() {
             <button className="btn" onClick={() => nav(`/console/compare?a=${run.id}`)}>Сравнить…</button></div>
         </>
       ) : (
-        <EventComposer step={k} steps={total} satellites={board.satellites} busy={!!busy}
+        <EventComposer run={run} step={k} steps={total} satellites={board.satellites} busy={!!busy}
           usedIds={[...view.events.map((e) => e.id)]} onSend={sendEvent} />
       )}
     </section>
-  );
+    {k > 0 && <AskPanel run={run} />}
+  </>);
 
   return (
     <>

@@ -115,3 +115,6 @@ textarea.input { resize: vertical; font-size: 12px; }
 /* Сравнение */
 .verdict { font: 500 22px var(--font-display); margin: 0 0 8px; color: var(--text-strong); }
 .verdict.a, .verdict.b { color: var(--ok); }
+.ask-row .input { flex: 1; width: auto; }
+.answer { border-left: 2px solid var(--id); padding-left: 12px; margin-top: 8px; }
+.answer p { margin: 4px 0; font-size: 14px; }
