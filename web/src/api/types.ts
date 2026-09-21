@@ -91,3 +91,28 @@ export interface Comparison {
   metrics: { name: string; a: number | null; b: number | null; delta: number | null; better: "a" | "b" | "equal" }[];
   verdict: { goal: Goal; preferred: "a" | "b" | "comparable"; reason: string };
 }
+
+export type ScenarioSource =
+  | { ref: string; overrides?: Overrides }
+  | { inline: object; overrides?: Overrides };
+
+// Запись запуска: хранится в браузере, сервер её не хранит (docs/CONTRACT.md, v1).
+export interface RunRecord {
+  schema: "sozvezdie-run-1";
+  id: string;
+  scenario: ScenarioSource;
+  scenario_hash: string;
+  run_metadata: {
+    goal: Goal; algorithm: Algorithm; version: string; parameters: Record<string, unknown>;
+    goal_history: { step: number; goal: Goal }[];
+    parent?: { run_id: string; fork_step: number };
+  };
+  events: EventRecord[];
+  rejected_events: { received_at_step: number; payload: unknown; error: string }[];
+  commands: { step: number; satellite_id: string; action: string; job_id?: string }[];
+  steps_executed: number;
+  planner_state: unknown;
+  notes: Record<string, Record<string, string>>;
+}
+
+export interface RunResponse { run: RunRecord; view: RunView; error?: string | null }

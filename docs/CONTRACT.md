@@ -1,4 +1,4 @@
-# Контракт ядро ↔ интерфейс (черновик v0)
+# Контракт ядро ↔ интерфейс (v1 — сервер без состояния)
 
 Правило: интерфейс ничего не считает. Каждое число на экране и в выгрузке приходит
 из одной функции ядра. Меняет этот файл только автор, и он сообщает второму участнику.
@@ -8,7 +8,7 @@
 ```
 model/        официальная библиотека организаторов — не редактируется
 core/         сценарии, запуски, планировщики, события, объяснения, сравнение (без FastAPI)
-api/          FastAPI: HTTP ↔ core, фоновые расчёты, изоляция запусков
+api/          FastAPI без состояния: HTTP ↔ core (Vercel Function)
 web/          React: экраны, графики — только отображение
 experiments/  генератор results/ (детерминированно, фиксированный seed)
 ```
@@ -115,55 +115,84 @@ interface Comparison {
 }
 ```
 
-## HTTP
+## Запуск без состояния на сервере (v1)
 
-| Метод | Путь | Вход | Выход |
-|---|---|---|---|
-| GET | `/api/scenarios` | — | `ScenarioInfo[]` |
-| POST | `/api/scenarios` | JSON сценария (файл) | `ScenarioInfo` или 422 с причиной |
-| POST | `/api/scenarios/{id}/derive` | `Overrides` | новый `ScenarioInfo` |
-| POST | `/api/runs` | `{scenario_id, goal, algorithm, parameters?}` | `RunView` |
-| POST | `/api/runs/{id}/advance` | `{until_step}` или `{steps}` | `RunView` (status=running, опрос) |
-| GET | `/api/runs/{id}` | — | `RunView` |
-| POST | `/api/runs/{id}/events` | один объект события | `RunView` или 422, состояние не меняется |
-| POST | `/api/runs/{id}/goal` | `{goal}` | `RunView` (запись в goal_history) |
-| POST | `/api/runs/{id}/fork` | `{goal?, algorithm?}` | `RunView` новой ветви |
-| GET | `/api/runs/{id}/jobs` | фильтры | `JobView[]` |
-| GET | `/api/runs/{id}/trace` | `from, to, satellite_id?` | `StepRow[]` |
-| GET | `/api/runs/{id}/explain` | `job_id` или `satellite_id+step` | `Explanation` |
-| GET | `/api/compare` | `a, b` | `Comparison` |
-| GET | `/api/runs/{id}/export` | — | результат `cosmo-B-ops-result-1.0` (+ поля команды) |
-| POST | `/api/replay` | результат JSON | `{match: boolean, summary, diff?}` |
+Деплой — Vercel Functions (Hobby: 1 vCPU, ≤300 с на запрос, ≤4,5 МБ тело запроса/ответа, экземпляры
+не делят память). Поэтому сервер ничего не хранит. Запуск — это запись `RunRecord`: её хранит браузер
+(IndexedDB) и присылает в каждом запросе. Сервер восстанавливает `Session` через
+`model.operations.replay_episode` (замер: 0,2 с P02, 0,4 с P04 на 288 шагов), выполняет действие и
+возвращает новую запись. Изоляция пользователей — по построению.
 
-Изоляция: запуск принадлежит сессии браузера (cookie), чужие запуски не видны.
+```ts
+type ScenarioSource =
+  | { ref: string; overrides?: Overrides }        // встроенный сценарий data/<ref>.json (+ производный)
+  | { inline: object; overrides?: Overrides };    // загруженный пользователем JSON
+
+interface RunRecord {
+  schema: "sozvezdie-run-1";
+  id: string;                                     // uuid, выдаёт сервер
+  scenario: ScenarioSource;
+  scenario_hash: string;                          // model.operations.digest(сценарий после overrides)
+  run_metadata: {                                 // идёт в экспорт как есть
+    goal: Goal; algorithm: Algorithm; version: string; parameters: Record<string, unknown>;
+    goal_history: { step: number; goal: Goal }[];
+    parent?: { run_id: string; fork_step: number };
+  };
+  events: EventRecord[];                          // принятые, в порядке получения
+  rejected_events: { received_at_step: number; payload: unknown; error: string }[];
+  commands: { step: number; satellite_id: string; action: string; job_id?: string }[];
+  steps_executed: number;
+  planner_state: unknown;                         // сериализованное состояние планировщика (JSON)
+  notes: Record<string, Record<string, string>>;  // шаг -> аппарат -> пояснение планировщика
+}
+```
+
+Требование к планировщику: `to_state() -> JSON` и `from_state(json)`, чтобы расчёт кусками давал
+те же команды, что и расчёт одним проходом (Т4). Проверяется тестом.
 
 ## Python-интерфейс ядра (`core/service.py`)
 
-`api/` вызывает только эти функции. Возвращаются словари ровно в форме типов выше.
-Ошибки ввода — `core.errors.InputError(message)`; сообщение показывается пользователю как есть,
-состояние при этом не меняется. Неизвестный id — `core.errors.NotFound`.
+`api/` вызывает только эти функции. Все чистые: запись на входе не меняется, возвращается новая.
+Ошибки ввода — `core.errors.InputError(message)`; сообщение показывается пользователю как есть.
 
 ```python
-list_scenarios() -> list[ScenarioInfo]
-add_scenario(raw: dict) -> ScenarioInfo                         # проверка через model.validate
-derive_scenario(scenario_id: str, overrides: Overrides) -> ScenarioInfo
+list_scenarios() -> list[ScenarioInfo]                           # встроенные data/*.json
+inspect_scenario(source: ScenarioSource) -> ScenarioInfo         # проверка через model.validate
 
-create_run(scenario_id: str, goal: Goal, algorithm: Algorithm,
-           parameters: dict | None = None) -> RunView
-advance(run_id: str, until_step: int,
-        on_progress: Callable[[int], None] | None = None) -> RunView  # блокирующий; api запускает в фоне
-apply_event(run_id: str, event: dict) -> RunView                # отказ -> InputError + запись в rejected_events
-set_goal(run_id: str, goal: Goal) -> RunView
-fork(run_id: str, goal: Goal | None = None, algorithm: Algorithm | None = None) -> RunView
-get_run(run_id: str) -> RunView
+create_run(source, goal, algorithm, parameters=None) -> RunRecord
+advance(record, until_step: int, budget_s: float = 240) -> RunRecord
+    # считает до until_step или пока не кончится бюджет времени; клиент повторяет вызов
+apply_event(record, event) -> tuple[RunRecord, str | None]
+    # отказ: возвращается запись с новой строкой rejected_events и текст ошибки; состояние не меняется
+set_goal(record, goal) -> RunRecord                              # строка в goal_history
+fork(record, goal=None, algorithm=None) -> RunRecord             # новый id, parent = {run_id, fork_step}
 
-jobs(run_id: str, status: str | None = None, priority: int | None = None) -> list[JobView]
-trace(run_id: str, step_from: int, step_to: int, satellite_id: str | None = None) -> list[StepRow]
-explain(run_id: str, job_id: str | None = None,
-        satellite_id: str | None = None, step: int | None = None) -> Explanation
-compare(run_a: str, run_b: str) -> Comparison
-export(run_id: str) -> dict                                     # cosmo-B-ops-result-1.0
-replay(result: dict) -> dict                                    # {match, summary, diff}
+view(record) -> RunView
+jobs(record, status=None, priority=None) -> list[JobView]
+trace(record, step_from, step_to, satellite_id=None) -> list[StepRow]
+explain(record, job_id=None, satellite_id=None, step=None) -> Explanation
+compare(record_a, record_b) -> Comparison
+export(record, include_trace=False) -> dict      # cosmo-B-ops-result-1.0; trace выключен — лимит 4,5 МБ
+replay(result: dict) -> dict                     # {match, summary, diff}
 ```
 
-Хранение — в памяти процесса (словари по id). Владение запусками и cookie — забота `api/`.
+## HTTP
+
+Все запросы — POST с JSON; запись запуска передаётся в поле `run` (или `a`, `b` для сравнения).
+
+| Путь | Тело | Ответ |
+|---|---|---|
+| `GET /api/scenarios` | — | `ScenarioInfo[]` |
+| `/api/scenarios/inspect` | `{source}` | `ScenarioInfo` или 422 |
+| `/api/runs/create` | `{source, goal, algorithm, parameters?}` | `{run, view}` |
+| `/api/runs/advance` | `{run, until_step}` | `{run, view}` — может остановиться раньше, клиент повторяет |
+| `/api/runs/event` | `{run, event}` | `{run, view, error}` — при отказе `error` непустой, `run` с записью отказа |
+| `/api/runs/goal` | `{run, goal}` | `{run, view}` |
+| `/api/runs/fork` | `{run, goal?, algorithm?}` | `{run, view}` |
+| `/api/runs/view` | `{run}` | `RunView` |
+| `/api/runs/jobs` | `{run, status?, priority?}` | `JobView[]` |
+| `/api/runs/trace` | `{run, step_from, step_to, satellite_id?}` | `StepRow[]` |
+| `/api/runs/explain` | `{run, job_id?, satellite_id?, step?}` | `Explanation` |
+| `/api/compare` | `{a, b}` | `Comparison` |
+| `/api/runs/export` | `{run, include_trace?}` | результат `cosmo-B-ops-result-1.0` |
+| `/api/replay` | результат JSON | `{match, summary, diff?}` |

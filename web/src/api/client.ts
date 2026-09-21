@@ -1,8 +1,9 @@
 import type {
-  Algorithm, Comparison, Explanation, Goal, JobView, Overrides, RunView, ScenarioInfo, StepRow,
+  Algorithm, Comparison, Explanation, Goal, JobView, RunRecord, RunResponse, RunView,
+  ScenarioInfo, ScenarioSource, StepRow,
 } from "./types";
 
-// Базовый адрес API. На Vercel задаётся VITE_API_URL, локально — прокси Vite.
+// Тот же домен: на Vercel /api — Python-функция, локально — прокси Vite.
 const BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
 export class ApiError extends Error {
@@ -10,48 +11,55 @@ export class ApiError extends Error {
   constructor(status: number, message: string) { super(message); this.status = status; }
 }
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + path, {
-    credentials: "include",
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-    ...init,
+async function req<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(BASE + path, body === undefined ? undefined : {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   if (!res.ok) {
-    let msg = `Ошибка ${res.status}`;
+    let msg = `Ошибка сервера ${res.status}`;
+    if (res.status === 413) msg = "Слишком большой запрос (лимит 4,5 МБ)";
     try {
-      const body = await res.json();
-      if (typeof body.detail === "string") msg = body.detail;
+      const data = await res.json();
+      if (typeof data.detail === "string") msg = data.detail;
     } catch { /* ответ без JSON */ }
     throw new ApiError(res.status, msg);
   }
   return res.json() as Promise<T>;
 }
 
-const post = <T>(path: string, body: unknown) => req<T>(path, { method: "POST", body: JSON.stringify(body) });
-const qs = (p: Record<string, string | number | undefined | null>) =>
-  new URLSearchParams(Object.entries(p).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString();
-
 export const api = {
   scenarios: () => req<ScenarioInfo[]>("/api/scenarios"),
-  uploadScenario: (raw: unknown) => post<ScenarioInfo>("/api/scenarios", raw),
-  derive: (id: string, o: Overrides) => post<ScenarioInfo>(`/api/scenarios/${id}/derive`, o),
+  inspect: (source: ScenarioSource) => req<ScenarioInfo>("/api/scenarios/inspect", { source }),
 
-  runs: () => req<RunView[]>("/api/runs"),
-  createRun: (scenario_id: string, goal: Goal, algorithm: Algorithm) =>
-    post<RunView>("/api/runs", { scenario_id, goal, algorithm }),
-  run: (id: string) => req<RunView>(`/api/runs/${id}`),
-  advance: (id: string, until_step?: number) => post<RunView>(`/api/runs/${id}/advance`, { until_step }),
-  event: (id: string, event: unknown) => post<RunView>(`/api/runs/${id}/events`, event),
-  setGoal: (id: string, goal: Goal) => post<RunView>(`/api/runs/${id}/goal`, { goal }),
-  fork: (id: string, goal?: Goal, algorithm?: Algorithm) => post<RunView>(`/api/runs/${id}/fork`, { goal, algorithm }),
+  create: (source: ScenarioSource, goal: Goal, algorithm: Algorithm) =>
+    req<RunResponse>("/api/runs/create", { source, goal, algorithm }),
+  advance: (run: RunRecord, until_step: number) => req<RunResponse>("/api/runs/advance", { run, until_step }),
+  event: (run: RunRecord, event: unknown) => req<RunResponse>("/api/runs/event", { run, event }),
+  setGoal: (run: RunRecord, goal: Goal) => req<RunResponse>("/api/runs/goal", { run, goal }),
+  fork: (run: RunRecord, goal?: Goal, algorithm?: Algorithm) => req<RunResponse>("/api/runs/fork", { run, goal, algorithm }),
 
-  jobs: (id: string, status?: string, priority?: number) =>
-    req<JobView[]>(`/api/runs/${id}/jobs?${qs({ status, priority })}`),
-  trace: (id: string, step_from: number, step_to: number, satellite_id?: string) =>
-    req<StepRow[]>(`/api/runs/${id}/trace?${qs({ step_from, step_to, satellite_id })}`),
-  explain: (id: string, p: { job_id?: string; satellite_id?: string; step?: number }) =>
-    req<Explanation>(`/api/runs/${id}/explain?${qs(p)}`),
-  compare: (a: string, b: string) => req<Comparison>(`/api/compare?${qs({ a, b })}`),
-  exportUrl: (id: string) => `${BASE}/api/runs/${id}/export`,
-  replay: (result: unknown) => post<{ match: boolean; summary: unknown; diff?: unknown }>("/api/replay", result),
+  view: (run: RunRecord) => req<RunView>("/api/runs/view", { run }),
+  jobs: (run: RunRecord, status?: string, priority?: number) => req<JobView[]>("/api/runs/jobs", { run, status, priority }),
+  trace: (run: RunRecord, step_from: number, step_to: number, satellite_id?: string) =>
+    req<StepRow[]>("/api/runs/trace", { run, step_from, step_to, satellite_id }),
+  explain: (run: RunRecord, p: { job_id?: string; satellite_id?: string; step?: number }) =>
+    req<Explanation>("/api/runs/explain", { run, ...p }),
+  compare: (a: RunRecord, b: RunRecord) => req<Comparison>("/api/compare", { a, b }),
+  export: (run: RunRecord, include_trace = false) => req<unknown>("/api/runs/export", { run, include_trace }),
+  replay: (result: unknown) => req<{ match: boolean; summary: unknown; diff?: unknown }>("/api/replay", result),
 };
+
+// Расчёт до шага: сервер считает в пределах бюджета времени, клиент повторяет вызов.
+export async function advanceUntil(
+  run: RunRecord, until: number, onProgress: (r: RunResponse) => void, signal?: AbortSignal,
+): Promise<RunResponse> {
+  let res: RunResponse = { run, view: await api.view(run) };
+  while (res.run.steps_executed < until) {
+    if (signal?.aborted) break;
+    const before = res.run.steps_executed;
+    res = await api.advance(res.run, until);
+    onProgress(res);
+    if (res.run.steps_executed === before) throw new ApiError(500, "Расчёт не продвинулся — повторите или сообщите об ошибке");
+  }
+  return res;
+}
