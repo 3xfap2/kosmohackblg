@@ -4,6 +4,7 @@ import type { Explanation, JobView, RunView, StepRow } from "../api/types";
 import ExplainPanel from "../components/ExplainPanel";
 import Gantt from "../components/Gantt";
 import JobsTable from "../components/JobsTable";
+import OrbitView from "../components/OrbitView";
 import SocChart from "../components/SocChart";
 import { ALGO, GOAL, clock, pct, usd } from "../format";
 import "./console.css";
@@ -28,6 +29,7 @@ export default function Console() {
   const [error, setError] = useState<string | null>(null);
   const [sat, setSat] = useState("S01");
   const [picked, setPicked] = useState<string | undefined>();
+  const [viewStep, setViewStep] = useState(() => Number(params.get("t") ?? 0));
 
   useEffect(() => {
     if (demo) loadDemo(demo).then((d) => {
@@ -94,8 +96,14 @@ export default function Console() {
       <div className="layout">
         <main>
           <section className="card">
+            <div className="card-head"><h2>Группировка в момент {clock(Math.min(viewStep, v.steps_total - 1))}</h2></div>
+            <OrbitView trace={trace} kindOf={kindOf} steps={v.steps_total} events={v.events}
+              step={viewStep} onStep={setViewStep} selected={sat} onSelect={setSat} />
+          </section>
+
+          <section className="card">
             <div className="card-head">
-              <h2>Расписание группировки</h2>
+              <h2>Подробное расписание</h2>
               <div className="legend mono">
                 <i style={{ background: "var(--relay)" }} />ретрансляция
                 <i style={{ background: "var(--info)" }} />на Землю
@@ -104,8 +112,9 @@ export default function Console() {
                 <i style={{ background: "var(--bad)" }} />отказ
               </div>
             </div>
-            <Gantt trace={trace} kindOf={kindOf} steps={v.steps_total} currentStep={v.step} selected={sat}
-              onSelect={(sid) => setSat(sid)} />
+            <p className="muted small">Строка — спутник, столбец — 5 минут. Пунктир — момент, показанный на орбите. Нажмите на ячейку, чтобы перейти к ней.</p>
+            <Gantt trace={trace} kindOf={kindOf} steps={v.steps_total} currentStep={viewStep} selected={sat}
+              onSelect={(sid, k) => { setSat(sid); setViewStep(k); }} />
           </section>
 
           <section className="card">
