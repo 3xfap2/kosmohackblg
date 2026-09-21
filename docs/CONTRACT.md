@@ -212,3 +212,9 @@ replay(result: dict) -> dict                     # {match, summary, diff}
 | `/api/compare` | `{a, b}` | `Comparison` |
 | `/api/runs/export` | `{run, include_trace?}` | результат `cosmo-B-ops-result-1.0` |
 | `/api/replay` | результат JSON | `{match, summary, diff?}` |
+| `/api/runs/verify` | `{run}` | выгрузка и повтор официальной моделью на сервере: `{match, summary, diff?}` |
+| `POST /api/demo` | — | `{run, view, suggested_events}` — P02 + сообщения организаторов до шага 144 |
+| `GET /api/proof`, `GET /api/results` | — | строки `results/summary.json` (без расчёта) |
+| `GET /api/extended` | — | `results/extended_summary.json` — расширенная модель, отдельный эксперимент |
+| `/api/features/{impact,forecast,why-not,what-if,frontier,stress,link,passport,report}` | `{run, …}` | функции О7 (`core/features.py`), каждая исполняется официальной моделью |
+| `GET /api/ai/status`, `/api/ai/ask`, `/api/ai/event` | `{run, question}` / `{run, text}` | ИИ-ассистент: ответ сверяется с фактами журнала; черновик сообщения не применяется сам |
