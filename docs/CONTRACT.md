@@ -19,6 +19,24 @@ experiments/  генератор results/ (детерминированно, ф�
 type Goal = "priority" | "revenue";
 type Algorithm = "horizon-cpsat" | "edf-baseline";
 
+// Задание в формате описания данных (раздел «Задания»).
+interface Job {
+  id: string; kind: "relay" | "downlink";
+  release_step: number; deadline_step: number; work_steps: number;
+  eligible_satellites: string[]; priority: 1 | 2 | 3; value_usd: number;
+}
+
+// Ровно то, что возвращает model.operations.Session.summary().
+interface OfficialSummary {
+  steps_executed: number; jobs_total: number; jobs_completed: number;
+  jobs_due: number; jobs_due_missed: number;
+  critical_jobs_due: number; critical_jobs_completed_on_time: number;
+  revenue_usd: number; blocked_command_count: number;
+  below_reserve_satellite_steps: number; brownout_satellite_steps: number;
+  critical_soc_satellite_steps: number; minimum_soc_pct: number;
+  terminal_soc_pct: Record<string, number>; work_steps_in_missed_jobs: number;
+}
+
 // Настройка до запуска. Изменённые условия — новый сценарий с новым id.
 interface Overrides {
   initial_soc_pct?: Record<string, number>;   // заряд выбранных аппаратов, 0–100
