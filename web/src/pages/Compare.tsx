@@ -1,0 +1,76 @@
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { api } from "../api/client";
+import { store } from "../api/store";
+import type { Comparison, RunRecord } from "../api/types";
+import { ALGO, GOAL } from "../format";
+
+// Сравнение двух запусков: вердикт ядра для выбранной цели, происхождение ветвей и различия.
+export default function Compare() {
+  const [params] = useSearchParams();
+  const [runs, setRuns] = useState<RunRecord[]>([]);
+  const [a, setA] = useState(params.get("a") ?? "");
+  const [b, setB] = useState(params.get("b") ?? "");
+  const [cmp, setCmp] = useState<Comparison | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { store.all().then(setRuns); }, []);
+  const label = (r: RunRecord) =>
+    `${r.id.slice(0, 8)} · ${"ref" in r.scenario ? r.scenario.ref : "свой"} · ${GOAL[r.run_metadata.goal]} · ${ALGO[r.run_metadata.algorithm]} · шаг ${r.steps_executed}`;
+
+  const run = async () => {
+    const ra = runs.find((r) => r.id === a), rb = runs.find((r) => r.id === b);
+    if (!ra || !rb) return;
+    setBusy(true); setError(null);
+    try { setCmp(await api.compare(ra, rb)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="setup">
+      <h1>Сравнение вариантов</h1>
+      <section className="card">
+        <p className="muted small">Честное сравнение — ветви из одного состояния (кнопка «Ветвь» в смене) или разные цели/алгоритмы на одном сценарии.</p>
+        <div className="form-row">
+          {[["A", a, setA], ["B", b, setB]].map(([name, val, set]) => (
+            <label key={name as string} className="field">Вариант {name as string}
+              <select className="select mono" value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>
+                <option value="">— выберите —</option>
+                {runs.map((r) => <option key={r.id} value={r.id}>{label(r)}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+        <button className="btn btn-primary" disabled={!a || !b || a === b || busy} onClick={run}>{busy ? "Сравнение…" : "Сравнить"}</button>
+        {error && <p className="error">{error}</p>}
+      </section>
+
+      {cmp && (
+        <section className="card">
+          <p className={"verdict " + cmp.verdict.preferred}>
+            {cmp.verdict.preferred === "comparable" ? "Результаты сопоставимы" : `Для цели «${GOAL[cmp.verdict.goal]}» предпочтительнее вариант ${cmp.verdict.preferred.toUpperCase()}`}
+          </p>
+          <p>{cmp.verdict.reason}</p>
+          <p className="mono small muted">
+            {cmp.same_origin ? `✓ общее исходное состояние (развилка на шаге ${cmp.fork_step})` : "варианты не из одного состояния — сравнение по итогам смены"}
+            {" · "}{cmp.same_events_after_fork ? "✓ одинаковые сообщения после развилки" : "⚠ сообщения после развилки различаются"}
+          </p>
+          <table className="table">
+            <thead><tr><th>Показатель</th><th>A</th><th>B</th><th>Разница B − A</th><th>Лучше</th></tr></thead>
+            <tbody>
+              {cmp.metrics.map((m) => (
+                <tr key={m.name}>
+                  <td>{m.name}</td>
+                  <td className="mono">{m.a ?? "—"}</td>
+                  <td className="mono">{m.b ?? "—"}</td>
+                  <td className="mono">{m.delta == null ? "—" : (m.delta > 0 ? "+" : "") + m.delta}</td>
+                  <td>{m.better === "equal" ? "равно" : m.better.toUpperCase()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+    </div>
+  );
+}

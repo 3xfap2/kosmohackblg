@@ -79,6 +79,16 @@ export interface StepRow {
   below_reserve: boolean; brownout: boolean;
 }
 
+export interface Timeline {
+  satellites: string[]; steps_total: number; steps_executed: number;
+  action: string[];
+  job: (string | null)[][];
+  soc: number[][];
+  temp: number[][];
+  dark: string[];
+  reasons: Record<string, string>;
+}
+
 export interface Explanation {
   subject: { job_id?: string; satellite_id?: string; step?: number };
   known_at_decision: string[];

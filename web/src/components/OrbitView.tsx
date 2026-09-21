@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { EventRecord, StepRow } from "../api/types";
+import type { EventRecord } from "../api/types";
+import type { Board, Cell } from "../lib/cells";
 import { REASON, clock } from "../format";
 
 // «Живая орбита»: схема группировки на выбранном шаге.
@@ -7,9 +8,7 @@ import { REASON, clock } from "../format";
 // восстанавливается из ряда solar_w (где у аппарата тень), а тень Земли рисуется справа от
 // планеты. Цвет точки — фактически выполненное действие из журнала модели.
 interface Props {
-  trace: StepRow[];
-  kindOf: Record<string, "relay" | "downlink">;
-  steps: number;
+  board: Board;
   events: EventRecord[];
   step: number;
   onStep: (k: number) => void;
@@ -38,13 +37,13 @@ const RINGS = [
 
 interface SatOrbit { ring: number; period: number; starts: number[]; shadowLen: number }
 
-function orbitOf(rows: StepRow[], ring: number): SatOrbit {
+function orbitOf(dark: string, ring: number): SatOrbit {
   const starts: number[] = [];
   let len = 0, run = 0, runs = 0;
-  rows.forEach((r, k) => {
-    const dark = r.solar_w === 0;
-    if (dark && (k === 0 || rows[k - 1].solar_w !== 0)) starts.push(k);
-    if (dark) run++; else if (run) { len += run; runs++; run = 0; }
+  [...dark].forEach((d, k) => {
+    const isDark = d === "1";
+    if (isDark && (k === 0 || dark[k - 1] !== "1")) starts.push(k);
+    if (isDark) run++; else if (run) { len += run; runs++; run = 0; }
   });
   const gaps = starts.slice(1).map((s, i) => s - starts[i]).sort((a, b) => a - b);
   const period = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 19;
@@ -65,7 +64,9 @@ function stars(n: number, w: number, h: number) {
   return Array.from({ length: n }, () => ({ x: rnd() * w, y: rnd() * h, r: rnd() * 1.1 + 0.2, a: rnd() * 0.6 + 0.2 }));
 }
 
-export default function OrbitView({ trace, kindOf, steps, events, step, onStep, selected, onSelect }: Props) {
+export default function OrbitView({ board, events, step, onStep, selected, onSelect }: Props) {
+  const steps = board.steps;
+  const last = Math.max(board.executed - 1, 0);
   const ref = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -74,21 +75,14 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
   const frac = useRef(step);
 
   const { sats, byStep, orbits } = useMemo(() => {
-    const bySat = new Map<string, StepRow[]>();
-    const byStep: Record<number, Record<string, StepRow>> = {};
-    for (const r of trace) {
-      if (!bySat.has(r.satellite_id)) bySat.set(r.satellite_id, []);
-      bySat.get(r.satellite_id)!.push(r);
-      (byStep[r.step] ??= {})[r.satellite_id] = r;
-    }
-    const sats = [...bySat.keys()].sort();
+    const byStep: Record<number, Record<string, Cell>> = {};
+    for (const c of board.cells) (byStep[c.step] ??= {})[c.satellite_id] = c;
+    const sats = board.satellites;
     const orbits: Record<string, SatOrbit> = {};
-    sats.forEach((sid, i) => {
-      const rows = bySat.get(sid)!.sort((a, b) => a.step - b.step);
-      orbits[sid] = orbitOf(rows, i % RINGS.length);
-    });
+    sats.forEach((sid, i) => { orbits[sid] = orbitOf(board.dark[sid] ?? "", i % RINGS.length); });
     return { sats, byStep, orbits };
-  }, [trace]);
+  }, [board]);
+  const isDark = (sid: string, k: number) => (board.dark[sid] ?? "")[k] === "1";
 
   const outages = useMemo(() => events.filter((e) => e.type === "satellite_outage"), [events]);
   const stateOf = (sid: string, k: number): State => {
@@ -96,17 +90,17 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
     if (outages.some((e) => e.type === "satellite_outage" && e.satellite_ids.includes(sid) && e.at_step <= k && k < e.end_step)) return "down";
     if (!r) return "idle";
     if (r.executed === "calibrate") return "calibrate";
-    if (r.executed === "job") return kindOf[r.requested.job_id ?? ""] ?? "relay";
-    if (r.requested.action !== "idle") return "rejected";
+    if (r.executed === "job") return r.kind ?? "relay";
+    if (r.rejected) return "rejected";
     return "idle";
   };
 
-  const k = Math.min(step, steps - 1);
+  const k = Math.min(step, last);
   const counts = useMemo(() => {
     const c: Record<string, number> = { relay: 0, downlink: 0, calibrate: 0, idle: 0, down: 0, rejected: 0, dark: 0 };
     for (const sid of sats) {
       c[stateOf(sid, k)]++;
-      if (byStep[k]?.[sid]?.solar_w === 0) c.dark++;
+      if (isDark(sid, k)) c.dark++;
     }
     return c;
   }, [sats, k, byStep]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -116,11 +110,11 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
     if (!playing) return;
     const id = setInterval(() => {
       const next = step + 1;
-      if (next >= steps) { setPlaying(false); return; }
+      if (next > last) { setPlaying(false); return; }
       onStep(next);
     }, 220 / speed);
     return () => clearInterval(id);
-  }, [playing, speed, step, steps, onStep]);
+  }, [playing, speed, step, last, onStep]);
 
   // Отрисовка: плавное движение к текущему шагу.
   useEffect(() => {
@@ -172,8 +166,8 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
       }
 
       const drawSat = (sid: string, p: { x: number; y: number }) => {
-        const st = stateOf(sid, Math.min(Math.round(t), steps - 1));
-        const dark = byStep[Math.min(Math.round(t), steps - 1)]?.[sid]?.solar_w === 0;
+        const st = stateOf(sid, Math.min(Math.round(t), last));
+        const dark = isDark(sid, Math.min(Math.round(t), last));
         const col = COLOR[st];
         if (st === "downlink") {
           const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy);
@@ -213,7 +207,7 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [sats, orbits, byStep, step, steps, selected]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sats, orbits, byStep, step, last, selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nearest = (e: React.MouseEvent) => {
     const rect = ref.current!.getBoundingClientRect();
@@ -246,7 +240,7 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
         />
         <div className="orbit-clock mono">
           <div className="orbit-time">{clock(k)}</div>
-          <div className="muted">шаг {k} из {steps}</div>
+          <div className="muted">шаг {k} из {steps}{board.executed < steps ? ` · выполнено ${board.executed}` : ""}</div>
         </div>
         <ul className="orbit-counts">
           {(["downlink", "relay", "calibrate", "idle", "down"] as State[]).map((s) => (
@@ -265,24 +259,24 @@ export default function OrbitView({ trace, kindOf, steps, events, step, onStep, 
         {hover && (
           <div className="tip" style={{ left: hover.x + 14, top: hover.y + 10 }}>
             <div><span className="id">{hover.sid}</span> · {LABEL[stateOf(hover.sid, k)]}</div>
-            {hovered?.executed === "job" && <div className="id">{hovered.requested.job_id}</div>}
-            {hovered && hovered.requested.action !== "idle" && hovered.executed === "idle" && (
-              <div style={{ color: "var(--bad)" }}>{REASON[hovered.reason] ?? hovered.reason}</div>
+            {hovered?.executed === "job" && <div className="id">{hovered.job_id}</div>}
+            {hovered?.rejected && (
+              <div style={{ color: "var(--bad)" }}>{REASON[hovered.reason ?? ""] ?? hovered.reason}</div>
             )}
-            {hovered && <div className="muted">заряд {hovered.soc_after_pct.toFixed(0)}% · {hovered.temp_after_c.toFixed(0)} °C</div>}
+            {hovered && <div className="muted">заряд {hovered.soc.toFixed(0)}% · {hovered.temp.toFixed(0)} °C</div>}
           </div>
         )}
       </div>
 
       <div className="orbit-controls">
-        <button className="btn" onClick={() => { if (step >= steps - 1) onStep(0); setPlaying(!playing); }}>
+        <button className="btn" disabled={last === 0} onClick={() => { if (step >= last) onStep(0); setPlaying(!playing); }}>
           {playing ? "❚❚ Пауза" : "▶ Проиграть смену"}
         </button>
         <div className="timeline">
-          <input type="range" min={0} max={steps - 1} value={k} onChange={(e) => { setPlaying(false); onStep(+e.target.value); }}
+          <input type="range" min={0} max={last} value={k} onChange={(e) => { setPlaying(false); onStep(+e.target.value); }}
             aria-label="Время смены" />
           {events.map((e) => (
-            <span key={e.id} className="tick" style={{ left: `${(e.at_step / (steps - 1)) * 100}%` }} title={`${e.id} · ${clock(e.at_step)}`} />
+            <span key={e.id} className="tick" style={{ left: `${(e.at_step / Math.max(last, 1)) * 100}%` }} title={`${e.id} · ${clock(e.at_step)}`} />
           ))}
         </div>
         <div className="speed">

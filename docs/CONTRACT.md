@@ -101,6 +101,18 @@ interface StepRow {                              // строка журнала 
   below_reserve: boolean; brownout: boolean;
 }
 
+// Компактное расписание для орбиты и диаграммы: полный trace P02 — 5,8 МБ (лимит ответа Vercel 4,5 МБ),
+// этот формат — ~0,3 МБ. Строки индексируются шагом 0..steps_executed-1.
+interface Timeline {
+  satellites: string[]; steps_total: number; steps_executed: number;
+  action: string[];                 // на аппарат строка: "." ожидание, "c" калибровка, "r" relay, "d" downlink, "x" отклонено
+  job: (string | null)[][];         // id задания на шаге (для "r"/"d"/"x"), иначе null
+  soc: number[][];                  // заряд в конце шага, %, 1 знак
+  temp: number[][];                 // температура в конце шага, °C, 1 знак
+  dark: string[];                   // на все steps_total шагов: "1" — solar_w == 0 (тень), иначе "0"
+  reasons: Record<string, string>;  // "S01|82" -> причина отказа модели (только для "x")
+}
+
 interface Explanation {                          // «Почему?» по заданию или аппарату/шагу
   subject: { job_id?: string; satellite_id?: string; step?: number };
   known_at_decision: string[];                   // какие сведения были доступны
@@ -171,7 +183,8 @@ fork(record, goal=None, algorithm=None) -> RunRecord             # новый id
 
 view(record) -> RunView
 jobs(record, status=None, priority=None) -> list[JobView]
-trace(record, step_from, step_to, satellite_id=None) -> list[StepRow]
+trace(record, step_from, step_to, satellite_id=None) -> list[StepRow]   # окно; не больше ~1 аппарата × 288 или 48 × 24
+timeline(record) -> Timeline
 explain(record, job_id=None, satellite_id=None, step=None) -> Explanation
 compare(record_a, record_b) -> Comparison
 export(record, include_trace=False) -> dict      # cosmo-B-ops-result-1.0; trace выключен — лимит 4,5 МБ
@@ -194,6 +207,7 @@ replay(result: dict) -> dict                     # {match, summary, diff}
 | `/api/runs/view` | `{run}` | `RunView` |
 | `/api/runs/jobs` | `{run, status?, priority?}` | `JobView[]` |
 | `/api/runs/trace` | `{run, step_from, step_to, satellite_id?}` | `StepRow[]` |
+| `/api/runs/timeline` | `{run}` | `Timeline` |
 | `/api/runs/explain` | `{run, job_id?, satellite_id?, step?}` | `Explanation` |
 | `/api/compare` | `{a, b}` | `Comparison` |
 | `/api/runs/export` | `{run, include_trace?}` | результат `cosmo-B-ops-result-1.0` |

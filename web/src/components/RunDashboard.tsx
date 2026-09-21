@@ -1,0 +1,133 @@
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { Explanation, JobView, RunView } from "../api/types";
+import type { Board } from "../lib/cells";
+import { clock, pct, usd } from "../format";
+import ExplainPanel from "./ExplainPanel";
+import Gantt from "./Gantt";
+import JobsTable from "./JobsTable";
+import OrbitView from "./OrbitView";
+import SocChart from "./SocChart";
+
+// Общая панель смены: одинаково для демо и живого запуска. Все числа — из RunView ядра.
+export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side }: {
+  view: RunView; jobs: JobView[]; board: Board;
+  explain: (jobId: string) => Promise<Explanation>;
+  initialStep?: number; side?: ReactNode;
+}) {
+  const [sat, setSat] = useState(board.satellites[0] ?? "S01");
+  const [cursor, setCursor] = useState(initialStep ?? Math.max(board.executed - 1, 0));
+  const [picked, setPicked] = useState<string | undefined>();
+  const [explanation, setExplanation] = useState<Explanation | null>(null);
+  const s = v.summary;
+
+  // Курсор следует за расчётом, пока смена идёт.
+  useEffect(() => { setCursor(Math.max(board.executed - 1, 0)); }, [board.executed]);
+  useEffect(() => {
+    if (!picked && jobs.length) setPicked(jobs.find((j) => j.status === "missed")?.id);
+  }, [jobs, picked]);
+  useEffect(() => {
+    if (!picked) { setExplanation(null); return; }
+    let live = true;
+    explain(picked).then((e) => live && setExplanation(e)).catch((e) => live && setExplanation({
+      subject: { job_id: picked }, known_at_decision: [], constraint: null, consequence: `Не удалось получить объяснение: ${e.message}`,
+    }));
+    return () => { live = false; };
+  }, [picked, explain]);
+
+  const satCells = useMemo(() => board.cells.filter((c) => c.satellite_id === sat), [board, sat]);
+
+  return (
+    <>
+      <section className="kpis">
+        <Kpi label="Приоритет 3 в срок" value={`${s.critical_jobs_completed_on_time} / ${s.critical_jobs_due}`} sub={pct(v.kpi.p3_on_time_share)} />
+        <Kpi label="Выполнено заданий" value={`${s.jobs_completed} / ${s.jobs_total}`} sub={`просрочено ${s.jobs_due_missed}`} />
+        <Kpi label="Выручка смены" value={usd(s.revenue_usd)} sub={`упущено ${usd(v.kpi.revenue_lost_in_missed_usd)}`} />
+        <Kpi label="Минимальный заряд" value={`${s.minimum_soc_pct.toFixed(1)}%`} sub={`ниже резерва: ${s.below_reserve_satellite_steps} ап.-шагов`} />
+        <Kpi label="Отклонено моделью" value={String(s.blocked_command_count)} sub="команд" />
+        <Kpi label="Загрузка аппаратов" value={pct(v.kpi.utilization)} sub="доля шагов с заданием" />
+      </section>
+
+      <div className="layout">
+        <main>
+          <section className="card">
+            <div className="card-head"><h2>Группировка в момент {clock(cursor)}</h2></div>
+            <OrbitView board={board} events={v.events} step={cursor} onStep={setCursor} selected={sat} onSelect={setSat} />
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>Подробное расписание</h2>
+              <div className="legend mono">
+                <i style={{ background: "var(--relay)" }} />ретрансляция
+                <i style={{ background: "var(--info)" }} />на Землю
+                <i style={{ background: "var(--warn)" }} />калибровка
+                <i style={{ background: "var(--surface)", border: "1px solid var(--line)" }} />тень
+                <i style={{ background: "var(--bad)" }} />отказ
+              </div>
+            </div>
+            <p className="muted small">Строка — спутник, столбец — 5 минут. Пунктир — момент, показанный на орбите. Нажмите на ячейку, чтобы перейти к ней.</p>
+            <Gantt board={board} cursor={cursor} selected={sat} onSelect={(sid, k) => { setSat(sid); setCursor(k); }} />
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2>Заряд аппарата <span className="id">{sat}</span></h2>
+              <select value={sat} onChange={(e) => setSat(e.target.value)} className="select mono">
+                {board.satellites.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </div>
+            <SocChart cells={satCells} dark={board.dark[sat] ?? ""} steps={board.steps} />
+            <p className="muted small">Пунктир: жёлтый — резерв 30 % (ниже него задания и калибровка не допускаются), красный — критический 20 %.</p>
+          </section>
+
+          <section className="card">
+            <div className="card-head"><h2>Задания</h2></div>
+            <JobsTable jobs={jobs} onPick={setPicked} picked={picked} />
+          </section>
+        </main>
+
+        <aside>
+          {side}
+          <section className="card">
+            <h2>Почему?</h2>
+            <ExplainPanel e={explanation} />
+          </section>
+          <section className="card">
+            <h2>Сообщения смены</h2>
+            {v.events.length === 0 && <p className="muted small">Сообщений пока нет.</p>}
+            <ol className="events">
+              {v.events.map((e) => (
+                <li key={e.id}>
+                  <span className="mono muted">{clock(e.at_step)}</span> <span className="id">{e.id}</span>{" "}
+                  {e.type === "add_jobs" ? `новые задания: ${e.jobs.map((j) => j.id).join(", ")}`
+                    : e.type === "satellite_outage" ? `недоступны ${e.satellite_ids.join(", ")} до ${clock(e.end_step)}`
+                    : `отмена сеансов: ${e.satellite_ids.length} ап. до ${clock(e.end_step)}`}
+                </li>
+              ))}
+            </ol>
+            {v.rejected_events.length > 0 && (
+              <>
+                <h4>Отклонённые</h4>
+                <ul className="events">
+                  {v.rejected_events.map((r, i) => (
+                    <li key={i} className="error">{clock(r.received_at_step)} · {r.error}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        </aside>
+      </div>
+    </>
+  );
+}
+
+function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="kpi">
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value mono">{value}</div>
+      {sub && <div className="kpi-sub muted">{sub}</div>}
+    </div>
+  );
+}

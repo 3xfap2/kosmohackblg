@@ -1,6 +1,6 @@
 import type {
   Algorithm, Comparison, Explanation, Goal, JobView, RunRecord, RunResponse, RunView,
-  ScenarioInfo, ScenarioSource, StepRow,
+  ScenarioInfo, ScenarioSource, StepRow, Timeline,
 } from "./types";
 
 // Тот же домен: на Vercel /api — Python-функция, локально — прокси Vite.
@@ -42,6 +42,7 @@ export const api = {
   jobs: (run: RunRecord, status?: string, priority?: number) => req<JobView[]>("/api/runs/jobs", { run, status, priority }),
   trace: (run: RunRecord, step_from: number, step_to: number, satellite_id?: string) =>
     req<StepRow[]>("/api/runs/trace", { run, step_from, step_to, satellite_id }),
+  timeline: (run: RunRecord) => req<Timeline>("/api/runs/timeline", { run }),
   explain: (run: RunRecord, p: { job_id?: string; satellite_id?: string; step?: number }) =>
     req<Explanation>("/api/runs/explain", { run, ...p }),
   compare: (a: RunRecord, b: RunRecord) => req<Comparison>("/api/compare", { a, b }),

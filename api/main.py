@@ -150,6 +150,11 @@ def trace(body: Trace):
     return call(service.trace, body.run, body.step_from, body.step_to, body.satellite_id)
 
 
+@app.post("/api/runs/timeline")
+def timeline(body: RunOnly):
+    return call(service.timeline, body.run)
+
+
 @app.post("/api/runs/explain")
 def explain(body: Explain):
     return call(service.explain, body.run, body.job_id, body.satellite_id, body.step)
