@@ -12,6 +12,11 @@
    задания занимают ресурсы»).
    Параметр p3_bonus_usd добавляет к стоимости задания P3 надбавку в цели «revenue».
 3. Исполнитель — допустимый аппарат с наибольшим зарядом (в долях ёмкости).
+   Защита заряда в тени (v1.3, `shadow_guard`): в тени сначала рассматриваются аппараты,
+   которые после шага задания простоят до конца тени не ниже резерва. Если такого нет,
+   а у задания и после этого шага хватает шагов с контактом, задание откладывается.
+   P04: ниже резерва 533 → 293 (приоритет) и 564 → 276 (коммерция) аппарато-шагов;
+   цена — 3 срочных из 1692 в приоритетном режиме. P01–P03 не меняются.
 4. Калибровка заранее: аппарат без задания на шаге калибруется, если до истечения
    срока калибровки осталось не больше `early_calibration` шагов. Так калибровка
    не отнимает шаг в момент, когда у аппарата есть работа.
@@ -29,8 +34,8 @@ from .base import Admission, Planner
 
 class GoalGreedyPlanner(Planner):
     name = "goal-greedy"
-    version = "1.2"
-    defaults = {"early_calibration": 8, "p3_bonus_usd": 0, "attitude_aware": False, "link_guard": False}
+    version = "1.3"
+    defaults = {"early_calibration": 8, "p3_bonus_usd": 0, "attitude_aware": False, "link_guard": False, "shadow_guard": True}
 
     def __init__(self, goal="priority", **params):
         unknown = set(params) - set(self.defaults)
@@ -42,7 +47,7 @@ class GoalGreedyPlanner(Planner):
         bonus = settings["p3_bonus_usd"]
         if isinstance(bonus, bool) or not isinstance(bonus, (int, float)) or bonus < 0 or bonus != bonus or bonus == float("inf"):
             raise ValueError("p3_bonus_usd: требуется конечное неотрицательное число")
-        for flag in ("attitude_aware", "link_guard"):
+        for flag in ("attitude_aware", "link_guard", "shadow_guard"):
             if type(settings[flag]) is not bool:
                 raise ValueError(f"{flag}: требуется true или false")
         super().__init__(goal, **settings)
@@ -77,10 +82,16 @@ class GoalGreedyPlanner(Planner):
                     if j["completed_step"] is None and j["release_step"] <= k < j["deadline_step"]
                     and j["deadline_step"] - k >= j["remaining_steps"]
                     and self._contact_steps(env, j, k) >= j["remaining_steps"]]
+        guard = self.params["shadow_guard"]
         for job in sorted(feasible, key=lambda j: self._key(env, j, k)):
             by_charge = sorted(job["eligible_satellites"], key=lambda s: (
+                -(guard and self._survives_shadow(env, s, job)),
                 -self._net_charge(env, s, {"action": "job", "job_id": job["id"]}), s))
+            # Задание можно отложить, если шагов с контактом хватит и без текущего.
+            spare = guard and self._contact_steps(env, job, k + 1) >= job["remaining_steps"]
             for sid in by_charge:
+                if spare and not self._survives_shadow(env, sid, job):
+                    continue
                 if sid not in adm.accepted and adm.add(sid, {"action": "job", "job_id": job["id"]})[0]:
                     notes[sid] = "goal_priority" if self.goal == "priority" else "goal_revenue"
                     break
@@ -108,6 +119,21 @@ class GoalGreedyPlanner(Planner):
             if not meta["parameters"][flag]:
                 del meta["parameters"][flag]
         return meta
+
+    @staticmethod
+    def _survives_shadow(env, sid, job) -> bool:
+        """В тени: хватит ли заряда после шага задания, чтобы простоять до конца тени не ниже резерва."""
+        solar = env.s["environment"][sid]["solar_w"]
+        if solar[env.k] > 0:
+            return True
+        v, m = env.sats[sid], env.s["model"]
+        energy = env.transition(sid, v[job["kind"] + "_w"])[0]
+        drain = v["base_w"] * env.s["time"]["step_s"] / 3600 / m["discharge_efficiency"]
+        t = env.k + 1
+        while t < len(solar) and solar[t] == 0:
+            energy -= drain
+            t += 1
+        return energy >= v["capacity_wh"] * m["reserve_soc_pct"] / 100
 
     def _net_charge(self, env, sid, action) -> float:
         """Доля заряда после вычета цены ориентации — главный ключ выбора исполнителя."""

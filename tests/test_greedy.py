@@ -52,3 +52,17 @@ def test_hopeless_cut_counts_known_unavailability():
     s["failures"] = [{"satellite_id": "S01", "start_step": 2, "end_step": 6}]
     run = service.advance(service.create_run({"inline": s}, "priority", "goal-greedy"), 6)
     assert not [c for c in run["commands"] if c.get("job_id") == "CUT-1"]
+
+
+@pytest.mark.parametrize("goal", ["priority", "revenue"])
+def test_shadow_guard_keeps_p04_above_reserve_more_than_edf(goal):
+    """Пункт 20: на P04 эвристика с защитой заряда в тени реже уходит ниже резерва, чем простое правило,
+    и выполняет больше срочных заданий в срок."""
+    from pathlib import Path
+    from experiments.run import episode
+    s = json.loads(Path("data/P04_demand.json").read_text(encoding="utf-8"))
+    ours = episode(s, "goal-greedy", goal)[1]["summary"]
+    off = episode(s, "goal-greedy", goal, parameters={"shadow_guard": False})[1]["summary"]
+    edf = episode(s, "edf-baseline", goal)[1]["summary"]
+    assert ours["below_reserve_satellite_steps"] < edf["below_reserve_satellite_steps"] < off["below_reserve_satellite_steps"]
+    assert ours["critical_jobs_completed_on_time"] > edf["critical_jobs_completed_on_time"]
