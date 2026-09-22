@@ -19,6 +19,9 @@ export default function Setup() {
   const [socVal, setSocVal] = useState("");
   const [prioJob, setPrioJob] = useState("");
   const [prioVal, setPrioVal] = useState<1 | 2 | 3>(3);
+  const [outSat, setOutSat] = useState("");
+  const [outFrom, setOutFrom] = useState("");
+  const [outTo, setOutTo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -33,6 +36,7 @@ export default function Setup() {
     if (solar) o.solar_factor = Number(solar);
     if (socSat && socVal) o.initial_soc_pct = { [socSat]: Number(socVal) };
     if (prioJob) o.job_priority = { [prioJob]: prioVal };
+    if (outSat && outFrom && outTo) o.failures = [{ satellite_id: outSat, start_step: Number(outFrom), end_step: Number(outTo) }];
     return Object.keys(o).length ? o : undefined;
   };
 
@@ -109,6 +113,12 @@ export default function Setup() {
                 <option value={3}>3</option><option value={2}>2</option><option value={1}>1</option>
               </select>
             </span></label>
+          <label className="field">Недоступность аппарата, шаги [с, по)
+            <span className="pair">
+              <input className="input mono" placeholder="S08" value={outSat} onChange={(e) => setOutSat(e.target.value)} />
+              <input className="input mono" placeholder="60" value={outFrom} onChange={(e) => setOutFrom(e.target.value)} />
+              <input className="input mono" placeholder="120" value={outTo} onChange={(e) => setOutTo(e.target.value)} />
+            </span></label>
         </div>
         <button className="btn" disabled={!source} onClick={applyOverrides}>Применить условия</button>
       </section>
@@ -128,7 +138,7 @@ export default function Setup() {
             <button key={a} className={"choice spot" + (algorithm === a ? " on" : "")} onClick={() => setAlgorithm(a)}>
               {a === "horizon-cpsat" && <span className="badge">основной</span>}
               <b>{ALGO[a]}</b>
-              <span className="muted small">{a === "horizon-cpsat" ? "Основной: эвристика, которую CP-SAT улучшает на 4 часа вперёд с учётом заряда и тени" : a === "goal-greedy" ? "Быстрая: порядок по цели, отсечка безнадёжных, калибровка заранее" : "Простое правило для сравнения: ближайший срок"}</span>
+              <span className="muted small">{a === "horizon-cpsat" ? "Основной: эвристика + CP-SAT на 4 часа вперёд; план CP-SAT принимается, только если модель подтверждает, что он не хуже" : a === "goal-greedy" ? "Быстрая: порядок по цели, отсечка безнадёжных, калибровка заранее" : "Простое правило для сравнения: ближайший срок"}</span>
             </button>
           ))}
         </div>

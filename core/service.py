@@ -34,7 +34,7 @@ def _source(source):
     try:
         validate(s)
         changes = source.get("overrides", {})
-        if not isinstance(changes, dict) or set(changes) - {"initial_soc_pct", "solar_factor", "job_priority"}:
+        if not isinstance(changes, dict) or set(changes) - {"initial_soc_pct", "solar_factor", "job_priority", "failures"}:
             raise ValueError("Неизвестные поля изменения сценария")
         sats, jobs = {v["id"]: v for v in s["satellites"]}, {j["id"]: j for j in s["jobs"]}
         for key, items, target in (("initial_soc_pct", sats, "initial_soc_pct"), ("job_priority", jobs, "priority")):
@@ -48,6 +48,11 @@ def _source(source):
             raise ValueError("Множитель солнечной мощности должен быть конечным и положительным")
         for env in s["environment"].values():
             env["solar_w"] = [v * factor for v in env["solar_w"]]
+        # Известный заранее период недоступности аппарата (постановка, п. 1): формат и границы проверяет validate модели.
+        extra = changes.get("failures", [])
+        if not isinstance(extra, list) or any(not isinstance(f, dict) or set(f) != {"satellite_id", "start_step", "end_step"} for f in extra):
+            raise ValueError("failures: список {satellite_id, start_step, end_step}")
+        s["failures"] = s["failures"] + copy.deepcopy(extra)
         if changes:
             original = s["meta"]["id"]
             s["meta"].update(id=original + "-" + digest(changes)[:12], derived_from=original, overrides=copy.deepcopy(changes))

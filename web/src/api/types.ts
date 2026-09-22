@@ -23,6 +23,7 @@ export interface Overrides {
   initial_soc_pct?: Record<string, number>;
   solar_factor?: number;
   job_priority?: Record<string, 1 | 2 | 3>;
+  failures?: { satellite_id: string; start_step: number; end_step: number }[];
 }
 
 export interface ScenarioInfo {
