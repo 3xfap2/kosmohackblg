@@ -3,6 +3,14 @@ name = "sozvezdie"
 version = "1.0.0"
 description = "Автономное управление спутниковой группировкой — веб-сервис оператора"
 requires-python = ">=3.12"
+# Зависимости для развёртывания: Vercel ставит их из этого файла (requirements.txt — для локальной работы,
+# там дополнительно pytest и httpx). Версии совпадают с requirements.txt.
+dependencies = [
+    "fastapi==0.115.6",
+    "pydantic==2.13.5",
+    "ortools==9.11.4210",
+    "anthropic==1.7.0",
+]
 
 [tool.vercel]
 entrypoint = "server.main:app"
