@@ -40,3 +40,15 @@ def test_revenue_goal_earns_at_least_priority_goal(ref):
         run = service.advance(service.create_run({"ref": ref}, goal, "goal-greedy"), 288, 600)
         revenue[goal] = service.view(run)["summary"]["revenue_usd"]
     assert revenue["revenue"] >= revenue["priority"], revenue
+
+
+def test_hopeless_cut_counts_known_unavailability():
+    """A10 учитывает известную недоступность: задание, которое из-за отказа не закончить, не начинается."""
+    s = json.loads((__import__("pathlib").Path(__file__).resolve().parents[1] / "data" / "P01_intro.json").read_text(encoding="utf-8"))
+    job = dict(s["jobs"][0], id="CUT-1", kind="downlink", release_step=0, deadline_step=6, work_steps=3,
+               eligible_satellites=["S01"], priority=3, value_usd=1000.0)
+    s["jobs"] = [job]
+    s["environment"]["S01"]["downlink_available"][:6] = [True] * 6
+    s["failures"] = [{"satellite_id": "S01", "start_step": 2, "end_step": 6}]
+    run = service.advance(service.create_run({"inline": s}, "priority", "goal-greedy"), 6)
+    assert not [c for c in run["commands"] if c.get("job_id") == "CUT-1"]

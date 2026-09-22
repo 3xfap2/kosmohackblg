@@ -79,7 +79,8 @@ def test_fork_goal_events_and_export(algorithm, tmp_path):
     assert parent == saved
     comparison = service.compare(a, b)
     assert comparison["same_origin"] and not comparison["same_events_after_fork"]
-    assert comparison["verdict"]["preferred"] == "comparable"
+    assert comparison["verdict"]["preferred"] == "incomparable"      # разные сообщения после развилки
+    assert comparison["verdict"]["by_goal"] == {"priority": "incomparable", "revenue": "incomparable"}
     export = service.export(b)
     assert "trace" not in export
     assert service.replay(export)["match"]

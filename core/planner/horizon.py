@@ -36,7 +36,7 @@ MILLS = 1000         # единица целевой функции — 0,001 д
 
 class HorizonPlanner(Planner):
     name = "horizon-cpsat"
-    version = "1.4"
+    version = "1.5"   # 1.5: эвристика v1.2 внутри (подсказка, страховка, запасной режим)
     defaults = {"horizon": 48, "replan_every": 6, "deterministic_limit": 0.5, "workers": 1,
                 "energy_value_usd_per_wh": 0.5, "seed": 7}
 

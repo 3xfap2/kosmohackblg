@@ -74,3 +74,20 @@ def test_tournament_same_state_all_strategies(run):
     best = max(t["rows"], key=lambda r: (r["p3_done"], r["revenue_usd"]))
     assert (best["algorithm"], best["goal"]) == (t["best"]["priority"]["algorithm"], t["best"]["priority"]["goal"])
     assert all(r["blocked_commands"] == 0 for r in t["rows"])
+
+
+def test_stress_works_on_tiny_scenario():
+    """Стресс-тест на всём допустимом диапазоне: 2 аппарата, 20 шагов (раньше randrange падал при n ≤ 36)."""
+    import json
+    from pathlib import Path
+    s = json.loads((Path(__file__).resolve().parents[1] / "data" / "P01_intro.json").read_text(encoding="utf-8"))
+    n, keep = 20, [v["id"] for v in s["satellites"][:2]]
+    s["time"]["steps"] = n
+    s["satellites"] = [v for v in s["satellites"] if v["id"] in keep]
+    s["environment"] = {sid: {k: v[:n] for k, v in env.items()} for sid, env in s["environment"].items() if sid in keep}
+    s["jobs"] = [dict(j, eligible_satellites=[x for x in j["eligible_satellites"] if x in keep])
+                 for j in s["jobs"] if j["deadline_step"] <= n and set(j["eligible_satellites"]) & set(keep)]
+    s["failures"] = []
+    run = service.create_run({"inline": s}, "priority", "goal-greedy")
+    r = F.stress_test(run, runs=3)
+    assert r["runs"] == 3 and len(r["rows"]) == 3

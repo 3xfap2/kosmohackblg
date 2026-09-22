@@ -277,17 +277,25 @@ def _full_shift(s, goal, algorithm, events, params=None):
     for e in events:
         by_step.setdefault(e["at_step"], []).append(e)
     n = s["time"]["steps"]
+    skipped = []
     while sess.env.k < n:
         for e in by_step.get(sess.env.k, []):
             try:
                 sess.apply_event(copy.deepcopy(e))
-            except ValueError:
-                pass   # событие не подходит изменённому сценарию — пропускается, как отказ модели
+            except (ValueError, KeyError, TypeError) as exc:
+                # Сообщение не подходит изменённому сценарию: модель его не примет — записываем, не молчим.
+                skipped.append({"id": e.get("id"), "reason": model_error(exc)})
         sess.advance(planner.decide(sess))
     m = sess.summary()
     return {"p3_done": m["critical_jobs_completed_on_time"], "p3_due": m["critical_jobs_due"],
             "jobs_done": m["jobs_completed"], "jobs_total": m["jobs_total"], "revenue_usd": round(m["revenue_usd"], 2),
-            "below_reserve_steps": m["below_reserve_satellite_steps"], "min_soc_pct": m["minimum_soc_pct"]}
+            "below_reserve_steps": m["below_reserve_satellite_steps"], "min_soc_pct": m["minimum_soc_pct"],
+            "skipped_events": skipped}
+
+
+def _skipped_note(results):
+    ids = sorted({e["id"] for r in results for e in r.get("skipped_events", [])})
+    return f" Внимание: не приняты моделью в части вариантов сообщения {', '.join(ids)} — такие варианты сравниваются с другим набором сообщений." if ids else ""
 
 
 def what_if(record):
@@ -321,7 +329,8 @@ def what_if(record):
     key = (lambda v: (v["delta"]["p3_done"], v["delta"]["revenue_usd"])) if goal == "priority" else (lambda v: v["delta"]["revenue_usd"])
     variants.sort(key=key, reverse=True)
     return {"goal": goal, "algorithm": HEURISTIC, "base": base, "variants": variants,
-            "note": "Условия организатора не меняются: каждый вариант — отдельный эксперимент на копии сценария."}
+            "note": "Каждый вариант — отдельный эксперимент на изменённой копии сценария; исходный сценарий и запись смены "
+                    "не меняются." + _skipped_note([base, *variants])}
 
 
 def frontier(record):
@@ -335,21 +344,24 @@ def frontier(record):
         p["dominated"] = any(q["p3_done"] >= p["p3_done"] and q["revenue_usd"] >= p["revenue_usd"]
                              and (q["p3_done"], q["revenue_usd"]) != (p["p3_done"], p["revenue_usd"]) for q in points)
     return {"points": points, "note": "Каждая точка — полная смена моделью организаторов; «доминируется» — есть точка "
-                                      "не хуже по обоим показателям и лучше хотя бы по одному."}
+                                      "не хуже по обоим показателям и лучше хотя бы по одному." + _skipped_note(points)}
 
 
 def _random_events(s, rng, count):
     sats = [v["id"] for v in s["satellites"]]
     n = s["time"]["steps"]
     events = []
+    # Моменты — из середины смены любой длины (1–288 шагов), число аппаратов — не больше имеющихся (1–48).
+    lo = min(12, n // 4)
+    hi = max(lo + 1, n - min(24, n // 4))
     for i in range(count):
-        at = rng.randrange(12, n - 24)
+        at = min(n - 1, rng.randrange(lo, hi))
         if rng.random() < 0.55:
-            ids = rng.sample(sats, rng.randint(1, 3))
+            ids = rng.sample(sats, rng.randint(1, min(3, len(sats))))
             events.append({"id": f"R-{i}", "at_step": at, "type": "satellite_outage",
                            "satellite_ids": sorted(ids), "end_step": min(n, at + rng.randint(12, 36))})
         else:
-            ids = rng.sample(sats, rng.randint(4, min(12, len(sats))))
+            ids = rng.sample(sats, rng.randint(min(4, len(sats)), min(12, len(sats))))
             events.append({"id": f"R-{i}", "at_step": at, "type": "close_downlink",
                            "satellite_ids": sorted(ids), "end_step": min(n, at + rng.randint(6, 24))})
     return sorted(events, key=lambda e: e["at_step"])

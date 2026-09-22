@@ -28,7 +28,7 @@ from .base import Admission, Planner
 
 class GoalGreedyPlanner(Planner):
     name = "goal-greedy"
-    version = "1.1"
+    version = "1.2"
     defaults = {"early_calibration": 8, "p3_bonus_usd": 0, "attitude_aware": False, "link_guard": False}
 
     def __init__(self, goal="priority", **params):
@@ -48,9 +48,13 @@ class GoalGreedyPlanner(Planner):
 
     @staticmethod
     def _contact_steps(env, job, k) -> int:
-        """Сколько шагов до срока хотя бы у одного допустимого исполнителя есть контакт."""
-        series = [env.s["environment"][sid][job["kind"] + "_available"] for sid in job["eligible_satellites"]]
-        return sum(any(av[t] for av in series) for t in range(k, job["deadline_step"]))
+        """Сколько шагов до срока хотя бы у одного допустимого исполнителя есть контакт
+        и он не в известном периоде недоступности (v1.2: раньше отказы не учитывались)."""
+        failures = env.s["failures"]
+        def usable(sid, t):
+            return env.s["environment"][sid][job["kind"] + "_available"][t] and not any(
+                f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"] for f in failures)
+        return sum(any(usable(sid, t) for sid in job["eligible_satellites"]) for t in range(k, job["deadline_step"]))
 
     def _key(self, env, job, k):
         if self.goal == "priority":
