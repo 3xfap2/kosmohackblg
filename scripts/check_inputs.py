@@ -33,6 +33,11 @@ def main() -> int:
     case = parser.parse_args().case
     errors = []
     listed = manifest()
+    present = {p.relative_to(ROOT).as_posix() for p in files()}
+    for missing in sorted(set(listed) - present):
+        errors.append(f"{missing}: файл есть в манифесте, но отсутствует в репозитории")
+    for extra in sorted(present - set(listed)):
+        errors.append(f"{extra}: файл есть в репозитории, но его нет в манифесте")
     for path in files():
         name = path.relative_to(ROOT).as_posix()
         if listed.get(name) != sha256(path):

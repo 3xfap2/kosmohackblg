@@ -54,7 +54,15 @@ export default function MyRuns() {
       let saved = record;
       try { (await api.view(record)) as RunView; } catch (e) {
         if (!isStaleVersion(e)) throw e;
-        setLoading("Смена рассчитана другой версией — пересчитываем…");
+        // Подпись чужого файла могла быть нарушена правкой: пересчитываем только с согласия оператора
+        // и предупреждаем, что итог будет посчитан заново из сценария и сообщений файла.
+        if (/Подпись записи/.test(String((e as Error).message))
+            && !window.confirm("Подпись файла не совпадает: он изменён вне сервиса или подписан другим сервером. "
+              + "Продолжить? Смена будет рассчитана заново из сценария и сообщений файла, сохранённые в нём итоги приняты не будут.")) {
+          setLoading(null);
+          return;
+        }
+        setLoading("Пересчитываем смену из файла…");
         saved = (await rebuildRun(record)).run;
       }
       await store.save(saved);

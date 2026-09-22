@@ -40,9 +40,10 @@ def test_api_rejects_body_without_length():
     assert r.status_code == 411
 
 
-def test_record_secret_required_on_vercel(monkeypatch):
+def test_record_secret_required_on_vercel(monkeypatch, tmp_path):
     import pytest
     from core import service
+    monkeypatch.setattr(service, "ROOT", tmp_path)        # файл секрета — во временной папке, не в репозитории
     monkeypatch.delenv("SOZVEZDIE_RECORD_SECRET", raising=False)
     monkeypatch.setenv("VERCEL", "1")
     with pytest.raises(RuntimeError, match="SOZVEZDIE_RECORD_SECRET"):

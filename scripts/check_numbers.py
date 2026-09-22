@@ -71,6 +71,9 @@ def claims(root=ROOT):
     research = json.loads((root / "results/research.json").read_text(encoding="utf-8"))
     for ref, st in research["stress"].items():
         assert st["wins"] == st["runs"] == 12, f"стресс-тест {ref}: {st['wins']} из {st['runs']} — обновить README/CRITERIA"
+    wins = sum(st["wins"] for st in research["stress"].values())
+    total = sum(st["runs"] for st in research["stress"].values())
+    out.append(("README.md", f"эвристика лучше простого правила в {wins} случаях из {total}"))
     link = lambda v: f"{ext[f'P02_shift__{v}__priority']['ext_link_coverage'] * 100:.1f}".replace(".", ",")
     out.append(("CRITERIA.md", f"{link('goal-greedy+attitude')} % → {link('goal-greedy+attitude+link')} %"))
     out.append(("README.md", f"{link('goal-greedy+attitude')} % → {link('goal-greedy+attitude+link')} %"))
@@ -125,8 +128,11 @@ def write_claims(root=ROOT):
 
 
 if __name__ == "__main__":
+    import sys
     errors, count = check()
-    write_claims()
+    if "--write" in sys.argv:          # по умолчанию проверка не меняет рабочее дерево
+        write_claims()
+        print("обновлён results/claims.json")
     for error in errors:
         print(error)
     print(f"Проверено числовых утверждений: {count}; ошибок: {len(errors)}")

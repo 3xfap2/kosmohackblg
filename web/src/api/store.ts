@@ -29,8 +29,13 @@ export const store = {
     try { await tx("readwrite", (s) => s.put(run)); } catch { /* только память */ }
   },
   async all(): Promise<RunRecord[]> {
-    try { return await tx("readonly", (s) => s.getAll() as IDBRequest<RunRecord[]>); }
-    catch { return [...memory.values()]; }
+    // Смены, которые не удалось записать в хранилище браузера, остаются только в памяти —
+    // их нужно отдавать вместе с сохранёнными, иначе смена «пропадает» из списка.
+    let saved: RunRecord[] = [];
+    try { saved = await tx("readonly", (s) => s.getAll() as IDBRequest<RunRecord[]>); } catch { /* только память */ }
+    const byId = new Map(saved.map((r) => [r.id, r]));
+    for (const [id, run] of memory) if (!byId.has(id)) byId.set(id, run);
+    return [...byId.values()];
   },
   async remove(id: string) {
     memory.delete(id);
