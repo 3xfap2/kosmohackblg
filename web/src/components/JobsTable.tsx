@@ -1,4 +1,3 @@
-import { markJury } from "../jury";
 import { useMemo, useState } from "react";
 import type { JobView } from "../api/types";
 import { GROUP, KIND, LOSS, STATUS, clock, usd } from "../format";
@@ -45,7 +44,7 @@ export default function JobsTable({ jobs, onPick, picked }: {
           </thead>
           <tbody>
             {rows.slice(0, 300).map((j) => (
-              <tr key={j.id} className={picked === j.id ? "picked" : ""} onClick={() => { onPick(j.id); markJury("explain"); }}>
+              <tr key={j.id} className={picked === j.id ? "picked" : ""} onClick={() => onPick(j.id)}>
                 <td><span className="id">{j.id}</span>{j.source !== "plan" && <span className="tag">{j.source}</span>}</td>
                 <td>{KIND[j.kind] ?? j.kind}</td>
                 <td className="mono">{j.priority}</td>

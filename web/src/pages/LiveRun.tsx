@@ -1,4 +1,3 @@
-import { markJury } from "../jury";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api } from "../api/client";
@@ -63,8 +62,6 @@ export default function LiveRun() {
         setRun(p.run); setView(p.view); store.save(p.run);
       }, abort.current.signal);
       await save(res.run, res.view);
-      markJury("advance");
-      if (res.run.events.length) markJury("continue");
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };
 
@@ -74,7 +71,6 @@ export default function LiveRun() {
     try {
       const res = await api.event(run, event);
       await save(res.run, res.view);   // отказ тоже сохраняется в журнале отклонённых
-      if (!res.error) markJury("message");
       return res.error ?? null;
     } catch (e) { return (e as Error).message; } finally { setBusy(null); }
   };
@@ -104,7 +100,6 @@ export default function LiveRun() {
       const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
       Object.assign(document.createElement("a"), { href: url, download: `sozvezdie_${run.id.slice(0, 8)}_step${run.steps_executed}.json` }).click();
       URL.revokeObjectURL(url);
-      markJury("export");
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };
 

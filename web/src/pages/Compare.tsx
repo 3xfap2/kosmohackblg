@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import { markJury } from "../jury";
 import { store } from "../api/store";
 import type { Comparison, RunRecord } from "../api/types";
 import TwinOrbits from "../features/TwinOrbits";
@@ -40,7 +39,7 @@ export default function Compare() {
     const ra = runs.find((r) => r.id === a), rb = runs.find((r) => r.id === b);
     if (!ra || !rb) return;
     setBusy(true); setError(null);
-    try { setCmp(await api.compare(ra, rb)); markJury("compare"); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { setCmp(await api.compare(ra, rb)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
   return (

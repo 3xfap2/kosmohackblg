@@ -6,7 +6,6 @@ import Method from "./Method";
 import MyRuns from "./MyRuns";
 import Results from "./Results";
 import Setup from "./Setup";
-import { JuryChecklist } from "../jury";
 import "./console.css";
 
 export default function Console() {
@@ -23,7 +22,6 @@ export default function Console() {
           <NavLink to="/console/results" className={link}>Результаты</NavLink>
           <NavLink to="/console/method" className={link}>Как это работает</NavLink>
         </nav>
-        <div className="bar-right"><JuryChecklist /></div>
       </header>
       <Routes>
         <Route index element={<DemoBoot />} />
