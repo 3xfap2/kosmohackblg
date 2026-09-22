@@ -11,3 +11,7 @@ dependencies = [
     "ortools==9.11.4210",
     "anthropic==1.7.0",
 ]
+
+[tool.vercel]
+# Vercel требует явную точку входа FastAPI (без неё сборка падает: «No FastAPI entrypoint found»).
+entrypoint = "server.main:app"
