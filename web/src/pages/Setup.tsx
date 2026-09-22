@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { UploadSimple } from "@phosphor-icons/react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { store } from "../api/store";
@@ -29,7 +30,7 @@ export default function Setup() {
     api.scenarios().then((list) => { setScenarios(list); if (list.some((x) => x.id === "P02_shift")) pick({ ref: "P02_shift" }); })
       .catch((e) => setError(`Сервер недоступен: ${e.message}`));
     store.all().then((r) => setRuns(r.sort((a, b) => a.id.localeCompare(b.id))));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const overrides = (): Overrides | undefined => {
     const o: Overrides = {};
@@ -81,8 +82,8 @@ export default function Setup() {
             </button>
           ))}
           <label className="scenario upload spot">
-            <span className="scenario-title">+ Свой сценарий</span>
-            <span className="muted small">формат cosmo-B-ops-1.0, проверяется моделью</span>
+            <span className="scenario-title"><UploadSimple weight="bold" /> Загрузить свой сценарий (JSON)</span>
+            <span className="muted small">формат cosmo-B-ops-1.0 из задания; файл проверяет модель организаторов</span>
             <input type="file" accept=".json,application/json" hidden onChange={async (e) => {
               const f = e.target.files?.[0]; if (!f) return;
               try { await pick({ inline: JSON.parse(await f.text()) }); } catch (err) { setError(`Файл не читается: ${(err as Error).message}`); }

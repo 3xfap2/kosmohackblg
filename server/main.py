@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any, Literal
 
@@ -36,6 +37,49 @@ app = FastAPI(title="Созвездие API", version="1.0")
 # Защита публичного развёртывания: размер записи и число одновременных тяжёлых исследований.
 MAX_BODY_BYTES = 8 * 1024 * 1024                       # запись P04 со своим сценарием — около 3 МБ
 HEAVY = threading.BoundedSemaphore(3)                  # исследования и ветви-оценки: не больше трёх одновременно
+COMPUTE = threading.BoundedSemaphore(4)                # расчёт шагов и демо: не больше четырёх одновременно
+AI = threading.BoundedSemaphore(2)                     # обращения к внешней модели: платный маршрут
+
+# Частота запросов с одного адреса: сервис публичный и без авторизации (требование постановки),
+# поэтому ограничиваем не пользователя, а нагрузку. Окно — минута, счётчики в памяти экземпляра.
+RATE_WINDOW_S = 60
+RATE_LIMITS = {"ai": 15, "features": 30, "compute": 90, "other": 300}
+_hits: dict[tuple[str, str], list[float]] = {}
+_hits_lock = threading.Lock()
+
+
+def _bucket(path: str) -> str:
+    if path.startswith("/api/ai/"):
+        return "ai"
+    if path.startswith("/api/features/"):
+        return "features"
+    if path in ("/api/runs/advance", "/api/demo", "/api/runs/create", "/api/runs/fork", "/api/compare"):
+        return "compute"
+    return "other"
+
+
+def _rate_ok(client: str, bucket: str) -> bool:
+    now = time.monotonic()
+    with _hits_lock:
+        if len(_hits) > 4096:                          # защита от роста памяти при переборе адресов
+            _hits.clear()
+        seen = [t for t in _hits.get((client, bucket), ()) if now - t < RATE_WINDOW_S]
+        if len(seen) >= RATE_LIMITS[bucket]:
+            _hits[(client, bucket)] = seen
+            return False
+        seen.append(now)
+        _hits[(client, bucket)] = seen
+    return True
+
+
+@app.middleware("http")
+async def limit_rate(request, call_next):
+    if request.url.path.startswith("/api/") and request.url.path != "/api/health":
+        client = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "-")
+        bucket = _bucket(request.url.path)
+        if not _rate_ok(client, bucket):
+            return JSONResponse({"detail": f"Слишком много запросов ({bucket}): подождите минуту"}, status_code=429)
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -49,13 +93,22 @@ async def limit_body(request, call_next):
     return await call_next(request)
 
 
-def heavy(fn, *args):
-    if not HEAVY.acquire(blocking=False):
-        raise HTTPException(429, "Сервер занят другим исследованием смены — повторите через минуту")
+def _limited(gate, message, fn, *args):
+    if not gate.acquire(blocking=False):
+        raise HTTPException(429, message)
     try:
         return call(fn, *args)
     finally:
-        HEAVY.release()
+        gate.release()
+
+
+def heavy(fn, *args):
+    return _limited(HEAVY, "Сервер занят другим исследованием смены — повторите через минуту", fn, *args)
+
+
+def compute(fn, *args):
+    """Расчёт шагов смены: тоже ограничен, иначе один клиент занимает все ядра."""
+    return _limited(COMPUTE, "Сервер занят расчётом других смен — повторите через минуту", fn, *args)
 
 Goal = Literal["priority", "revenue"]
 Algorithm = Literal["horizon-cpsat", "goal-greedy", "edf-baseline"]
@@ -153,7 +206,7 @@ def create(body: Create):
 
 @app.post("/api/runs/advance")
 def advance(body: Advance):
-    return with_view(call(service.advance, body.run, body.until_step, BUDGET_S))
+    return with_view(compute(service.advance, body.run, body.until_step, BUDGET_S))
 
 
 @app.post("/api/runs/event")
@@ -236,12 +289,12 @@ def ai_status():
 
 @app.post("/api/ai/ask")
 def ai_ask(body: Ask):
-    return call(ai.ask, body.run, body.question)
+    return _limited(AI, "Помощник занят — повторите через минуту", ai.ask, body.run, body.question)
 
 
 @app.post("/api/ai/event")
 def ai_event(body: Draft):
-    return call(ai.draft_event, body.run, body.text)
+    return _limited(AI, "Помощник занят — повторите через минуту", ai.draft_event, body.run, body.text)
 
 
 # ------------------------------------------------------------------ функции О7 (docs/PROPOSAL_O7.md)
@@ -403,6 +456,16 @@ def demo():
     как подсказки — оператор отправляет их сам, продолжает расчёт, создаёт ветви.
     Здесь только порядок вызовов ядра. Алгоритм — эвристика по цели (расчёт за секунды).
     """
+    import json
+    if not COMPUTE.acquire(blocking=False):
+        raise HTTPException(429, "Сервер занят расчётом других смен — повторите через минуту")
+    try:
+        return _demo()
+    finally:
+        COMPUTE.release()
+
+
+def _demo():
     import json
     events = json.loads(DEMO_EVENTS.read_text(encoding="utf-8"))["events"]
     run = call(service.create_run, {"ref": "P02_shift"}, "priority", "goal-greedy", None)

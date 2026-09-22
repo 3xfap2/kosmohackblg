@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { store } from "../api/store";
 import type { Algorithm, EventRecord, Forecast, Goal, RunRecord, RunView } from "../api/types";
 import { ALGO, GOAL, clock } from "../format";
-import { GLOSSARY } from "../glossary";
+import { GLOSSARY } from "../glossary-terms";
 
 // Шапка смены: всё, что нужно всегда, и всё кликабельно.
 interface Props {

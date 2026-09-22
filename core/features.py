@@ -214,6 +214,16 @@ def forecast(record, horizon=24):
 
 
 # ---------------------------------------------------------------- F2. «Почему не?» с проверкой
+def _price(displaced, gained):
+    """Цена этого контрфакта: сколько заданий и денег отдано и получено взамен.
+    Это цена показанного примера, а не доказанный минимум."""
+    def total(jobs):
+        return {"jobs": len(jobs), "p3": sum(j["priority"] == 3 for j in jobs),
+                "revenue_usd": round(sum(j["value_usd"] for j in jobs), 2)}
+    lost, won = total(displaced), total(gained)
+    return {"lost": lost, "gained": won, "net_revenue_usd": round(won["revenue_usd"] - lost["revenue_usd"], 2)}
+
+
 def why_not(record, job_id):
     """Контрфакт: задание назначается принудительно с его открытия, остальное — тем же алгоритмом.
     Показывает, выполнилось бы оно и какие задания пришлось бы отдать. Это проверяемый пример,
@@ -270,6 +280,8 @@ def why_not(record, job_id):
         "completed_step": cjob["completed_step"], "window": [start, until],
         "displaced": [_brief(actual.env.jobs[i]) for i in sorted(done_real - done_cf)],
         "gained": [_brief(cf.env.jobs[i]) for i in sorted(done_cf - done_real) if i != job_id],
+        "price": _price([actual.env.jobs[i] for i in sorted(done_real - done_cf)],
+                        [cf.env.jobs[i] for i in sorted(done_cf - done_real) if i != job_id]),
         "actual": _score(actual, start, until), "counterfactual": _score(cf, start, until),
         "note": "Проверено моделью организаторов: задание назначалось первым при каждом допустимом шаге, "
                 "остальные решения — тем же алгоритмом. Это пример цены, а не минимальное изменение.",

@@ -4,6 +4,7 @@ import copy
 import hashlib
 import hmac
 import os
+import re
 from functools import lru_cache
 import math
 from pathlib import Path
@@ -158,8 +159,10 @@ def _restore(record):
     try:
         if not isinstance(record, dict) or record.get("schema") != "sozvezdie-run-1":
             raise ValueError("Неверная схема записи запуска")
-        if not isinstance(record["id"], str) or not record["id"]:
-            raise ValueError("Нет идентификатора запуска")
+        # id и run_metadata.parent — метки браузера, в подпись не входят (сравнение проверяет повтор
+        # префикса, а не метки), поэтому формат проверяем отдельно: id попадает в имя файла выгрузки.
+        if not isinstance(record["id"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", record["id"]):
+            raise ValueError("Некорректный идентификатор запуска: допустимы латиница, цифры, «-» и «_», до 64 знаков")
         if not hmac.compare_digest(str(record.get("signature", "")), _signature(record)):
             raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или подписана другим ключом сервера — смена будет пересчитана")
         s = _source(record["scenario"])

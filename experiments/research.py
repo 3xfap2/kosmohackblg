@@ -2,7 +2,7 @@
 
 1. Чувствительность настроек CP-SAT (A1 окно, A2 период перестройки, A3 ценность остатка энергии):
    P02, приоритетный режим, меняется одна настройка, остальные — по умолчанию (48, 6, 0,5).
-2. Стресс-тест (F7) с seed 7: 12 случайных допустимых наборов отказов и отмен связи,
+2. Стресс-тест (F7) на двух независимых seed (7 и 21): по 12 случайных допустимых наборов отказов и отмен связи,
    эвристика против простого правила, P02 и P04, приоритетный режим.
 Каждый прогон — полная смена официальной моделью.
 """
@@ -51,11 +51,13 @@ def main():
             out["sensitivity"]["runs"][key] = {**done[label], "parameters": params}
     for ref in ("P02_shift", "P04_demand"):
         record = service.create_run({"ref": ref}, "priority", "goal-greedy")
-        r = features.stress_test(record, runs=12, seed=7)
-        out["stress"][ref] = {k: r[k] for k in ("seed", "runs", "goal", "wins", "ours", "baseline")} | {
-            "rows": [{"run": x["run"], "events": x["events"], "ours": {k: x["ours"][k] for k in ("p3_done", "revenue_usd")},
-                      "baseline": {k: x["baseline"][k] for k in ("p3_done", "revenue_usd")}} for x in r["rows"]]}
-        print(ref, "stress wins", r["wins"], "of", r["runs"], flush=True)
+        for seed in (7, 21):
+            r = features.stress_test(record, runs=12, seed=seed)
+            row = {k: r[k] for k in ("seed", "runs", "goal", "wins", "ours", "baseline")} | {
+                "rows": [{"run": x["run"], "events": x["events"], "ours": {k: x["ours"][k] for k in ("p3_done", "revenue_usd")},
+                          "baseline": {k: x["baseline"][k] for k in ("p3_done", "revenue_usd")}} for x in r["rows"]]}
+            out["stress"][ref if seed == 7 else f"{ref}__seed{seed}"] = row
+            print(ref, "seed", seed, "stress wins", r["wins"], "of", r["runs"], flush=True)
     path = ROOT / "results" / "research.json"
     path.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print("записано:", path.relative_to(ROOT))

@@ -56,7 +56,7 @@ export default function JobsTable({ jobs, onPick, picked }: {
                   <span className="dot" style={{ background: DOT[j.status] }} />{STATUS[j.status]}
                   {j.loss ? (
                     <span className={"loss " + j.loss.group}>{GROUP[j.loss.group]}: {LOSS[j.loss.code] ?? j.loss.code}</span>
-                  ) : j.status === "missed" && <span className="loss">причина не установлена — доказательств недостаточно</span>}
+                  ) : j.status === "missed" && <span className="loss">прямого доказательства нет — откройте «Можно ли было выполнить?»: контрфакт покажет цену</span>}
                 </td>
               </tr>
             ))}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, isStaleVersion, rebuildRun } from "../api/client";
+import type { Goal } from "../api/types";
 import { store } from "../api/store";
 import type { Comparison, RunRecord } from "../api/types";
 import TwinOrbits from "../features/TwinOrbits";
@@ -22,6 +23,7 @@ const fmt = (name: string, x: number | null) => (x == null ? "—" : (METRIC[nam
 
 // Сравнение двух запусков: вердикт ядра для выбранной цели, происхождение ветвей и различия.
 export default function Compare() {
+  const [verdictGoal, setVerdictGoal] = useState<Goal>("priority");
   const [params] = useSearchParams();
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [a, setA] = useState(params.get("a") ?? "");
@@ -75,9 +77,18 @@ export default function Compare() {
 
       {cmp && (
         <section className="card">
-          <p className={"verdict " + cmp.verdict.preferred}>
+          <div className="row">
+            <span className="muted small">Цель сравнения:</span>
+            <div className="seg">
+              {(["priority", "revenue"] as const).map((g) => (
+                <button key={g} className={g === verdictGoal ? "on" : ""} onClick={() => setVerdictGoal(g)}>{GOAL[g]}</button>
+              ))}
+            </div>
+          </div>
+          <p className={"verdict " + (cmp.verdict.by_goal?.[verdictGoal] ?? cmp.verdict.preferred)}>
             {cmp.verdict.preferred === "incomparable" ? "Несопоставимо: условия вариантов различаются"
-              : cmp.verdict.preferred === "comparable" ? "Результаты сопоставимы" : `Для цели «${GOAL[cmp.verdict.goal]}» предпочтительнее вариант ${cmp.verdict.preferred.toUpperCase()}`}
+              : (cmp.verdict.by_goal?.[verdictGoal] ?? cmp.verdict.preferred) === "comparable" ? "Результаты сопоставимы"
+              : `Для цели «${GOAL[verdictGoal]}» предпочтительнее вариант ${(cmp.verdict.by_goal?.[verdictGoal] ?? cmp.verdict.preferred).toUpperCase()}`}
           </p>
           <p>{cmp.verdict.reason}</p>
           {cmp.verdict.by_goal && cmp.verdict.preferred !== "incomparable" && (

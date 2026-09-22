@@ -32,8 +32,8 @@ export const api = {
   scenarios: () => req<ScenarioInfo[]>("/api/scenarios"),
   inspect: (source: ScenarioSource) => req<ScenarioInfo>("/api/scenarios/inspect", { source }),
 
-  create: (source: ScenarioSource, goal: Goal, algorithm: Algorithm) =>
-    req<RunResponse>("/api/runs/create", { source, goal, algorithm }),
+  create: (source: ScenarioSource, goal: Goal, algorithm: Algorithm, parameters?: Record<string, unknown>) =>
+    req<RunResponse>("/api/runs/create", { source, goal, algorithm, parameters }),
   advance: (run: RunRecord, until_step: number) => req<RunResponse>("/api/runs/advance", { run, until_step }),
   event: (run: RunRecord, event: unknown) => req<RunResponse>("/api/runs/event", { run, event }),
   setGoal: (run: RunRecord, goal: Goal) => req<RunResponse>("/api/runs/goal", { run, goal }),
@@ -101,7 +101,8 @@ export const isStaleVersion = (e: unknown) => /Версия планировщи
 export async function rebuildRun(old: RunRecord, onProgress?: (step: number) => void): Promise<RunResponse> {
   const meta = old.run_metadata;
   const history = meta.goal_history ?? [];
-  let res = await api.create(old.scenario, history[0]?.goal ?? meta.goal, meta.algorithm);
+  // Настройки алгоритма переносятся: иначе пересчёт пошёл бы со значениями по умолчанию.
+  let res = await api.create(old.scenario, history[0]?.goal ?? meta.goal, meta.algorithm, meta.parameters);
   const steps = [
     ...old.events.map((e) => ({ step: e.at_step, apply: (r: RunRecord) => api.event(r, e) })),
     ...history.slice(1).map((g) => ({ step: g.step, apply: (r: RunRecord) => api.setGoal(r, g.goal) })),

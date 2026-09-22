@@ -119,13 +119,16 @@ ASK_SCHEMA = {
 def _grounded(answer: str, facts: dict) -> bool:
     """Все идентификаторы и числа ответа есть в фактах (число шага можно дать как время ЧЧ:ММ)."""
     blob = json.dumps(facts, ensure_ascii=False)
+    known = {n.replace(",", ".").rstrip("0").rstrip(".") if "." in n.replace(",", ".") else n
+             for n in NUM_RE.findall(blob)}
     for token in ID_RE.findall(answer):
         if token not in blob:
             return False
     times = {f"{int(h):02d}:{m}" for h, m in TIME_RE.findall(answer)}
     for num in NUM_RE.findall(answer):
         value = num.replace(",", ".")
-        if value in blob or any(t.startswith(num) or t.endswith(num) for t in times):
+        short = value.rstrip("0").rstrip(".") if "." in value else value
+        if short in known or any(t.startswith(num) or t.endswith(num) for t in times):
             continue
         if len(value.rstrip("0").rstrip(".")) <= 1:   # «1 аппарат», «2 канала» — служебные малые числа
             continue

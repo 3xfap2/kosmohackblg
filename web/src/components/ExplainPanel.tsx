@@ -42,6 +42,9 @@ export default function ExplainPanel({ e, whyNot, missed }: {
                 ? <p className="finding">Можно — но ценой {cur.r.displaced?.length ? cur.r.displaced.map((j) => `${j.id} (P${j.priority}, ${usd(j.value_usd)})`).join(", ") : "ничего"}
                     {cur.r.gained?.length ? `; попутно выполнилось бы ${cur.r.gained.map((j) => j.id).join(", ")}` : ""}.</p>
                 : <p className="finding">Даже при приоритетном назначении не выполняется — не хватило допустимых шагов.</p>)}
+            {cur?.r?.price && cur.r.verdict === "possible" && (
+              <p className="small">Цена замещения: отдано {cur.r.price.lost.jobs} заданий на {usd(cur.r.price.lost.revenue_usd)} (срочных — {cur.r.price.lost.p3}), получено взамен {cur.r.price.gained.jobs} на {usd(cur.r.price.gained.revenue_usd)}; по деньгам {cur.r.price.net_revenue_usd >= 0 ? "+" : ""}{usd(cur.r.price.net_revenue_usd)}.</p>
+            )}
             {cur?.r?.note && <p className="muted tiny">{cur.r.note}</p>}
           </div>
         );

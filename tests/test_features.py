@@ -91,3 +91,18 @@ def test_stress_works_on_tiny_scenario():
     run = service.create_run({"inline": s}, "priority", "goal-greedy")
     r = F.stress_test(run, runs=3)
     assert r["runs"] == 3 and len(r["rows"]) == 3
+
+
+def test_why_not_reports_replacement_price():
+    """О3: контрфакт показывает не только список вытесненных заданий, но и цену замещения числом."""
+    from core import features
+    run = service.advance(service.create_run({"ref": "P02_shift"}, "priority", "goal-greedy"), 60)
+    missed = [j for j in service.jobs(run, status="missed")][:1]
+    if not missed:
+        pytest.skip("на этом шаге нет просроченных заданий")
+    r = features.why_not(run, missed[0]["id"])
+    if r["verdict"] != "possible":
+        return
+    price = r["price"]
+    assert price["lost"]["jobs"] == len(r["displaced"]) and price["gained"]["jobs"] == len(r["gained"])
+    assert price["net_revenue_usd"] == round(price["gained"]["revenue_usd"] - price["lost"]["revenue_usd"], 2)

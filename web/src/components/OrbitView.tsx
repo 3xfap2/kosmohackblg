@@ -142,7 +142,9 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
       if (isDark(sid, k)) c.dark++;
     }
     return c;
-  }, [sats, k, byStep]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Вспомогательные функции чтения журнала стабильны внутри рендера, в зависимостях не нужны.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sats, k, byStep]);
 
   // п.7: рассказ — подписи к ключевым моментам смены.
   const story = useMemo(() => {
@@ -215,7 +217,7 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
       c.removeEventListener("wheel", onWheel); document.removeEventListener("pointerdown", leave);
       document.removeEventListener("keydown", esc); window.clearTimeout(hintTimer);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Отрисовка: плавное движение к текущему шагу.
   useEffect(() => {
@@ -342,7 +344,10 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [sats, orbits, byStep, step, last, selected, zoom, playing]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Цвета темы и подписи читаются внутри кадра отрисовки: в зависимости они не нужны,
+    // иначе анимация перезапускалась бы на каждом кадре.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sats, orbits, byStep, step, last, selected, zoom, playing]);
 
   const nearest = (x: number, y: number) => {
     let best: string | null = null, bd = 16;

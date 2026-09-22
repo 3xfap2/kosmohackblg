@@ -52,3 +52,17 @@ def test_record_secret_required_on_vercel(monkeypatch):
     monkeypatch.delenv("VERCEL")
     monkeypatch.delenv("SOZVEZDIE_RECORD_SECRET")
     assert service._record_secret() not in (b"", b"sozvezdie-dev-secret")
+
+
+def test_api_rate_limit_and_busy_signal():
+    """Публичный сервис без авторизации: частота запросов с адреса ограничена (429)."""
+    from server.main import RATE_LIMITS
+    c = TestClient(app)
+    ok = 0
+    for _ in range(RATE_LIMITS["features"] + 3):
+        r = c.post("/api/features/forecast", json={"run": {}})
+        if r.status_code == 429:
+            break
+        ok += 1
+    assert r.status_code == 429 and ok <= RATE_LIMITS["features"]
+    assert c.get("/api/health").status_code == 200        # проверка живости не ограничивается

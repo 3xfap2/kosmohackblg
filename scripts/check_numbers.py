@@ -63,8 +63,7 @@ def claims(root=ROOT):
     edf = runs["P02_events__edf-baseline__priority"]["summary"]
     out.append(("README.md", f"Простое правило с теми же сообщениями: срочные {edf['critical_jobs_completed_on_time']}, просрочено {edf['jobs_due_missed']}"))
     research = json.loads((root / "results/research.json").read_text(encoding="utf-8"))
-    for ref in ("P02_shift", "P04_demand"):
-        st = research["stress"][ref]
+    for ref, st in research["stress"].items():
         assert st["wins"] == st["runs"] == 12, f"стресс-тест {ref}: {st['wins']} из {st['runs']} — обновить README/CRITERIA"
     link = lambda v: f"{ext[f'P02_shift__{v}__priority']['ext_link_coverage'] * 100:.1f}".replace(".", ",")
     out.append(("CRITERIA.md", f"{link('goal-greedy+attitude')} % → {link('goal-greedy+attitude+link')} %"))

@@ -14,6 +14,18 @@ from model.resource_env import load
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _cpsat_gain(solves):
+    """Вклад CP-SAT в числах: на сколько принятый план решателя лучше эвристики на том же окне.
+    Оценка окна из core/planner/horizon.py: (срочные, выручка) для приоритета и (выручка,) для коммерции.
+    Окна, где план решателя не принят, вклада не дают."""
+    taken = [x for x in solves if not x["fallback"] and not x.get("baseline_guard", False)
+             and "candidate_score" in x and "baseline_score" in x]
+    p3 = sum(c[0] - b[0] for c, b in ((x["candidate_score"], x["baseline_score"]) for x in taken) if len(c) == 2)
+    revenue = [c[-1] - b[-1] for c, b in ((x["candidate_score"], x["baseline_score"]) for x in taken)]
+    return {"windows": len(solves), "accepted": len(taken), "p3": p3,
+            "revenue_usd": round(sum(revenue), 2), "max_window_revenue_usd": round(max(revenue), 2) if revenue else 0.0}
+
+
 def episode(scenario, algorithm, goal, events=(), frozen=None, parameters=None):
     planner = make_planner(algorithm, goal, **(parameters or {}))
     session = Session(scenario, {**planner.metadata(), "goal": goal,
@@ -51,6 +63,7 @@ def episode(scenario, algorithm, goal, events=(), frozen=None, parameters=None):
         "solver_statuses": dict(Counter(x["status"] for x in getattr(planner, "solves", []))),
         "cpsat_selected_solves": sum(not x["fallback"] and not x.get("baseline_guard", False)
                                     for x in getattr(planner, "solves", [])),
+        "cpsat_gain": _cpsat_gain(getattr(planner, "solves", [])),
         "algorithm_version": planner.version, "scenario_hash": digest(scenario),
         "events_hash": digest(result["events"])}
     return result, stats, elapsed

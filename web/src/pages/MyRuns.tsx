@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, isStaleVersion, rebuildRun } from "../api/client";
 import { store } from "../api/store";
 import type { RunRecord } from "../api/types";
 import { ALGO, GOAL, clock } from "../format";
+import type { RunView } from "../api/types";
 
 // Все смены из браузера: ветви под своими родителями, открыть / сравнить две / удалить.
 export default function MyRuns() {
@@ -43,18 +44,42 @@ export default function MyRuns() {
     setRuns(await store.all());
   };
 
+  // Смена из файла: подпись и версию проверяет сервер; запись другой версии пересчитывается.
+  const [loading, setLoading] = useState<string | null>(null);
+  const importRun = async (file: File) => {
+    setLoading("Проверяем файл смены…");
+    try {
+      const record = JSON.parse(await file.text()) as RunRecord;
+      if (record?.schema !== "sozvezdie-run-1") throw new Error("Это не файл смены: нужен JSON с полем schema = sozvezdie-run-1");
+      let saved = record;
+      try { (await api.view(record)) as RunView; } catch (e) {
+        if (!isStaleVersion(e)) throw e;
+        setLoading("Смена рассчитана другой версией — пересчитываем…");
+        saved = (await rebuildRun(record)).run;
+      }
+      await store.save(saved);
+      setRuns(await store.all());
+      nav(`/console/run/${saved.id}`);
+    } catch (e) { setLoading(null); alert(`Файл не принят: ${(e as Error).message}`); }
+  };
+
   return (
     <div className="setup">
       <div className="page-head">
         <div>
           <h1>Мои смены</h1>
-          <p className="muted small">Смены хранятся только в этом браузере. Отметьте две, чтобы сравнить.</p>
+          <p className="muted small">Смены хранятся только в этом браузере, без регистрации. Чтобы открыть смену на другом
+            компьютере, скачайте файл смены на её странице и загрузите здесь.{loading ? ` ${loading}` : ""}</p>
         </div>
         <div className="page-actions">
           <button className="btn btn-primary" disabled={picked.length !== 2}
             onClick={() => nav(`/console/compare?a=${picked[0]}&b=${picked[1]}`)}>
             Сравнить выбранные{picked.length ? ` (${picked.length}/2)` : ""}
           </button>
+          <label className="btn file">Загрузить смену из файла
+            <input type="file" accept=".json,application/json" hidden
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void importRun(f); e.target.value = ""; }} />
+          </label>
           <Link className="btn" to="/console/new">Новая смена</Link>
         </div>
       </div>

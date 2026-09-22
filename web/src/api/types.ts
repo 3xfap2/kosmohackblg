@@ -154,6 +154,7 @@ export interface WhyNot {
   job_id: string; verdict: "impossible" | "possible" | "not_found" | "completed";
   proof?: { code: string; proof: string }; completed_step?: number | null; window?: [number, number];
   displaced?: BriefJob[]; gained?: BriefJob[]; note?: string;
+  price?: { lost: { jobs: number; p3: number; revenue_usd: number }; gained: { jobs: number; p3: number; revenue_usd: number }; net_revenue_usd: number };
 }
 export interface ShiftResult { p3_done: number; p3_due: number; jobs_done: number; jobs_total: number; revenue_usd: number; below_reserve_steps: number; min_soc_pct: number }
 export interface WhatIf { goal: string; base: ShiftResult & { label: string }; variants: (ShiftResult & { label: string; kind: string; delta: { p3_done: number; jobs_done: number; revenue_usd: number } })[]; note: string }

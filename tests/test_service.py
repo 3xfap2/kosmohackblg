@@ -271,3 +271,13 @@ def test_parent_label_not_signed_but_history_is():
     moved = json.loads(json.dumps(run))
     moved["run_metadata"]["parent"] = {"run_id": "old-parent", "fork_step": 3}
     assert service.view(moved)["step"] == 6
+
+
+def test_record_id_is_validated():
+    """id не входит в подпись (это метка браузера), поэтому его формат проверяется отдельно:
+    он попадает в имя файла выгрузки."""
+    run = service.create_run({"ref": "P01_intro"}, "priority", "goal-greedy")
+    for bad in ("../../etc/passwd", "a" * 65, "", "прогон 1"):
+        with pytest.raises(InputError, match="дентификатор"):
+            service.view({**run, "id": bad})
+    assert service.view({**run, "id": "run-1_v1-3"})["step"] == 0

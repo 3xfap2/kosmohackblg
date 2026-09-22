@@ -13,9 +13,13 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
   run: RunRecord; suggestions?: EventRecord[]; step: number; steps: number; satellites: string[]; usedIds: string[];
   onSend: (event: unknown) => Promise<string | null>; busy: boolean;
 }) {
-  const nextId = () => { let n = usedIds.length + 1; while (usedIds.includes(`E-${n}`)) n++; return `E-${n}`; };
+  // Свободный номер сообщения: список занятых приходит из журнала смены и меняется после отправки.
+  const freeId = (taken: string[]) => { let n = taken.length + 1; while (taken.includes(`E-${n}`)) n++; return `E-${n}`; };
   const [kind, setKind] = useState<Kind>("satellite_outage");
-  const [id, setId] = useState(nextId);
+  const [typedId, setId] = useState("");
+  // Занятый номер заменяется свободным сразу, как только сообщение попало в журнал смены:
+  // так второе сообщение на том же шаге не уходит с идентификатором первого.
+  const id = typedId && !usedIds.includes(typedId) ? typedId : freeId(usedIds);
   const [sats, setSats] = useState<string[]>([]);
   const [end, setEnd] = useState(Math.min(step + 12, steps));
   const [json, setJson] = useState("");
@@ -54,7 +58,7 @@ export default function EventComposer({ run, step, steps, satellites, usedIds, o
     try { event = build(); } catch (e) { setResult({ ok: false, text: `Некорректный JSON: ${(e as Error).message}` }); return; }
     const error = await onSend(event);
     setResult(error ? { ok: false, text: error } : { ok: true, text: "Сообщение принято, план перестроится с этого шага." });
-    if (!error) { setId(nextId()); setSats([]); setJson(""); }
+    if (!error) { setId(""); setSats([]); setJson(""); }
   };
 
   const toggle = (sid: string) => setSats((x) => (x.includes(sid) ? x.filter((s) => s !== sid) : [...x, sid]));

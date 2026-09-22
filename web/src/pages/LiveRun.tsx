@@ -64,7 +64,7 @@ export default function LiveRun() {
           const res = await rebuildRun(r, (step) => setRebuilding(`Пересчёт текущей версией алгоритма: шаг ${step} из ${r.steps_executed}`));
           // Прежний расчёт не теряется: копия под своим id («Мои смены», можно выгрузить и повторить моделью).
           // Запись с чужой подписью сервер не примет, копию не храним.
-          if (!resigned) await store.save({ ...r, id: `${r.id}-v${r.run_metadata.version}` });
+          if (!resigned) await store.save({ ...r, id: `${r.id}-v${r.run_metadata.version.replace(/\W/g, "-")}` });
           await store.save(res.run);
           setRun(res.run);
           await refresh(res.run, res.view);
@@ -179,6 +179,14 @@ export default function LiveRun() {
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };
 
+  // Файл смены для переноса в другой браузер: подписанная запись целиком (её принимает «Мои смены»).
+  const downloadRun = () => {
+    if (!run) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(run)], { type: "application/json" }));
+    Object.assign(document.createElement("a"), { href: url, download: `smena_${run.id.slice(0, 8)}_shag${run.steps_executed}.json` }).click();
+    URL.revokeObjectURL(url);
+  };
+
   const board = useMemo(() => (timeline ? fromTimeline(timeline) : null), [timeline]);
   // Прогноз — один запрос на состояние смены: для колокольчика в шапке и карточки прогноза.
   useEffect(() => {
@@ -275,6 +283,7 @@ export default function LiveRun() {
           </div>
           <h4>Результат</h4>
           <div className="row"><button className="btn" disabled={!!busy} onClick={download}>Скачать выгрузку JSON</button>
+            <button className="btn" onClick={downloadRun}>Файл смены для переноса</button>
             <button className="btn" onClick={() => nav(`/console/compare?a=${run.id}`)}>Сравнить…</button></div>
           <div className="row"><button className="btn" disabled={k === 0} onClick={() => setReport(true)}>Отчёт о передаче смены</button></div>
         </>
