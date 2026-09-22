@@ -6,6 +6,10 @@
     "api/index.py": {
       "maxDuration": 300,
       "includeFiles": "{data/**,model/**,core/**,server/**,examples/**,results/summary.json,results/extended_summary.json,results/timings.json,results/research.json,results/demo_losses.json}"
+    },
+    "server/main.py": {
+      "maxDuration": 300,
+      "includeFiles": "{data/**,model/**,core/**,server/**,examples/**,results/summary.json,results/extended_summary.json,results/timings.json,results/research.json,results/demo_losses.json}"
     }
   },
   "rewrites": [
