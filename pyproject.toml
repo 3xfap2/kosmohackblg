@@ -11,6 +11,3 @@ dependencies = [
     "ortools==9.11.4210",
     "anthropic==1.7.0",
 ]
-
-[tool.vercel]
-entrypoint = "server.main:app"
