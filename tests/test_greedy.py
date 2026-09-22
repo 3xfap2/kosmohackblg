@@ -30,3 +30,13 @@ def test_p02_priority_losses_are_all_provable():
     assert missed_p3, "в P02 есть доказуемо невыполнимые задания P3"
     assert all(j.get("loss", {}).get("group") == "problem_limit" for j in missed_p3)
     assert service.view(run)["summary"]["blocked_command_count"] == 0
+
+
+@pytest.mark.parametrize("ref", ["P02_shift", "P03_energy", "P04_demand"])
+def test_revenue_goal_earns_at_least_priority_goal(ref):
+    """Цель «Коммерческая отдача» не должна приносить меньше выручки, чем «Приоритетное обслуживание»."""
+    revenue = {}
+    for goal in ("priority", "revenue"):
+        run = service.advance(service.create_run({"ref": ref}, goal, "goal-greedy"), 288, 600)
+        revenue[goal] = service.view(run)["summary"]["revenue_usd"]
+    assert revenue["revenue"] >= revenue["priority"], revenue

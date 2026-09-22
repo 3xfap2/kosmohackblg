@@ -2,8 +2,10 @@
 
 Отличия от простого правила EDF (`edf.py`), каждое проверено на P02–P04:
 1. Порядок заданий зависит от цели: «priority» — приоритет, затем запас времени
-   (срок − шаг − остаток работы), затем стоимость; «revenue» — стоимость на шаг
-   оставшейся работы, затем запас.
+   (срок − шаг − остаток работы), затем стоимость; «revenue» — стоимость на оставшуюся
+   возможность: стоимость / число шагов до срока, где у допустимых исполнителей есть контакт.
+   Задание с малым числом возможностей идёт раньше, даже если оно дешевле (v1.1: порядок
+   «стоимость на шаг работы» в P02 и P03 давал выручку ниже приоритетного режима).
 2. Не берутся задания, которые уже нельзя завершить: до срока осталось меньше шагов,
    чем работы, или меньше шагов с контактом у допустимых исполнителей. Работа на них
    не приносит дохода и занимает аппарат (постановка: «начатые, но не завершённые
@@ -26,7 +28,7 @@ from .base import Admission, Planner
 
 class GoalGreedyPlanner(Planner):
     name = "goal-greedy"
-    version = "1.0"
+    version = "1.1"
     defaults = {"early_calibration": 8, "p3_bonus_usd": 0, "attitude_aware": False, "link_guard": False}
 
     def __init__(self, goal="priority", **params):
@@ -50,13 +52,14 @@ class GoalGreedyPlanner(Planner):
         series = [env.s["environment"][sid][job["kind"] + "_available"] for sid in job["eligible_satellites"]]
         return sum(any(av[t] for av in series) for t in range(k, job["deadline_step"]))
 
-    def _key(self, job, k):
-        slack = (job["deadline_step"] - k) - job["remaining_steps"]
+    def _key(self, env, job, k):
         if self.goal == "priority":
+            slack = (job["deadline_step"] - k) - job["remaining_steps"]
             return (-job["priority"], slack, -job["value_usd"], job["id"])
-        # «revenue»: стоимость на шаг работы; надбавка за P3 (по умолчанию 0) строит компромисс для F6.
+        # «revenue»: стоимость на оставшуюся возможность связи; надбавка за P3 (по умолчанию 0)
+        # строит компромисс для F6.
         bonus = self.params["p3_bonus_usd"] if job["priority"] == 3 else 0
-        return (-(job["value_usd"] + bonus) / job["remaining_steps"], slack, job["id"])
+        return (-(job["value_usd"] + bonus) / max(1, self._contact_steps(env, job, k)), job["id"])
 
     def decide(self, session) -> dict[str, dict]:
         env = session.env
@@ -71,7 +74,7 @@ class GoalGreedyPlanner(Planner):
                     if j["completed_step"] is None and j["release_step"] <= k < j["deadline_step"]
                     and j["deadline_step"] - k >= j["remaining_steps"]
                     and self._contact_steps(env, j, k) >= j["remaining_steps"]]
-        for job in sorted(feasible, key=lambda j: self._key(j, k)):
+        for job in sorted(feasible, key=lambda j: self._key(env, j, k)):
             by_charge = sorted(job["eligible_satellites"], key=lambda s: (
                 -self._net_charge(env, s, {"action": "job", "job_id": job["id"]}), s))
             for sid in by_charge:

@@ -333,6 +333,9 @@ def results():
                     "mean_terminal_soc_pct": round(sum(m["terminal_soc_pct"].values()) / len(m["terminal_soc_pct"]), 6),
                     "missed_work_steps": m["work_steps_in_missed_jobs"],
                     "replay_match": r.get("replay_match"), "repeat_match": r.get("repeat_match"),
+                    "new_jobs_total": r.get("new_jobs_total"), "new_jobs_completed": r.get("new_jobs_completed"),
+                    "plan_rejections": sum((r.get("plan_rejections") or {}).values()),
+                    "missed": m["jobs_due_missed"],
                     "solves": r["solves"], "cpsat_selected": r["cpsat_selected_solves"],
                     "guard": r["baseline_guard_solves"], "fallback": r["fallback_solves"],
                     "seconds": timings.get(key)})

@@ -9,6 +9,7 @@ interface Row {
   p3_done: number; p3_due: number; jobs_done: number; jobs_total: number; revenue_usd: number;
   blocked: number; min_soc_pct: number; replay_match?: boolean; repeat_match?: boolean;
   below_reserve: number; mean_terminal_soc_pct: number; missed_work_steps: number;
+  new_jobs_total?: number | null; new_jobs_completed?: string[] | null; plan_rejections: number; missed: number;
   solves: number; cpsat_selected: number; guard: number; fallback: number; seconds?: number | null;
 }
 const SCEN: Record<string, [string, string]> = {
@@ -132,7 +133,9 @@ export default function Results() {
                 <i>→</i>
                 <div><span className="muted tiny">с перестройкой</span><b className="mono">{goal === "priority" ? `${adaptive.p3_done} / ${adaptive.p3_due}` : usd(adaptive.revenue_usd)}</b></div>
                 <div className="duel-side muted small mono">
-                  выполнено {frozen.jobs_done} → {adaptive.jobs_done}<br />
+                  {adaptive.new_jobs_total ? <>заявки из сообщений выполнены: {frozen.new_jobs_completed?.length ?? 0} → {adaptive.new_jobs_completed?.length ?? 0} из {adaptive.new_jobs_total}<br /></> : null}
+                  просрочено заданий {frozen.missed} → {adaptive.missed}<br />
+                  команд без допуска модели {frozen.plan_rejections} → {adaptive.plan_rejections}<br />
                   {goal === "priority" ? `выручка ${usd(frozen.revenue_usd)} → ${usd(adaptive.revenue_usd)}` : `срочные ${frozen.p3_done} → ${adaptive.p3_done}`}
                 </div>
               </div>

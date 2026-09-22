@@ -105,6 +105,11 @@ def main():
                     assert digest(result) == digest(other)
                     stats["repeat_match"] = True
                 stats.update(scenario_id=scenario["meta"]["id"], goal=goal, algorithm="horizon-cpsat", mode=mode)
+                # Что стало с заданиями из сообщений: старый план о них не знает.
+                added = [j["id"] for e in events if e["type"] == "add_jobs" for j in e["jobs"]]
+                done = {r["completed_job"] for r in result["trace"] if r["completed_job"]}
+                stats["new_jobs_total"] = len(added)
+                stats["new_jobs_completed"] = sorted(j for j in added if j in done)
                 summary["runs"][key] = stats
                 (output / "runs" / (key + ".json")).write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
                 timings[key] = round(elapsed, 3)
