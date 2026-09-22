@@ -25,11 +25,18 @@ ROOT = Path(__file__).resolve().parents[1]
 # содержимому записи, кроме id (метка в браузере) и самой подписи. Числа приводятся к единому виду:
 # JavaScript превращает 125.0 в 125, и без этого подпись ломалась бы при обычной пересылке через браузер.
 def _record_secret() -> bytes:
-    """Секрет подписи. На Vercel обязателен из окружения (все экземпляры должны подписывать одинаково);
-    локально без переменной — случайный, создаётся один раз в .local_record_secret (вне git)."""
+    """Секрет подписи. Задаётся переменной SOZVEZDIE_RECORD_SECRET — тогда подпись держится
+    между развёртываниями. Если её нет:
+    — на развёртывании ключ выводится из идентификатора самого развёртывания: он одинаков у всех
+      экземпляров, поэтому запись, подписанная одним, проходит у другого; после новой выкладки
+      прежние записи пересчитываются в браузере (сервис от этого не падает);
+    — локально ключ случайный и лежит в .local_record_secret (вне git)."""
     value = os.environ.get("SOZVEZDIE_RECORD_SECRET", "")
     if value:
         return value.encode()
+    deployment = os.environ.get("VERCEL_DEPLOYMENT_ID") or os.environ.get("VERCEL_GIT_COMMIT_SHA") or ""
+    if os.environ.get("VERCEL") and deployment:
+        return hashlib.sha256(f"sozvezdie-run-1:{deployment}".encode()).hexdigest().encode()
     if os.environ.get("VERCEL"):
         raise RuntimeError("SOZVEZDIE_RECORD_SECRET не задан: на развёртывании подпись записей обязательна")
     path = ROOT / ".local_record_secret"
