@@ -94,7 +94,7 @@ export async function advanceUntil(
 // Смена, рассчитанная прежней версией алгоритма, не продолжается (версия — часть воспроизводимости).
 // Пересчёт: тот же сценарий, начальная цель и алгоритм; те же принятые сообщения и смены цели на тех же шагах;
 // до того же шага. Отклонённые сообщения не повторяются. Идентификатор и родитель ветви сохраняются.
-export const isStaleVersion = (e: unknown) => /Версия планировщика изменилась/.test(String((e as Error)?.message ?? e));
+export const isStaleVersion = (e: unknown) => /Версия планировщика изменилась|Подпись записи не совпадает/.test(String((e as Error)?.message ?? e));
 
 export async function rebuildRun(old: RunRecord, onProgress?: (step: number) => void): Promise<RunResponse> {
   const meta = old.run_metadata;
@@ -110,6 +110,6 @@ export async function rebuildRun(old: RunRecord, onProgress?: (step: number) => 
     res = await s.apply(res.run);
   }
   if (res.run.steps_executed < old.steps_executed) res = await advanceUntil(res.run, old.steps_executed, progress);
-  const run = { ...res.run, id: old.id, run_metadata: { ...res.run.run_metadata, ...(meta.parent ? { parent: meta.parent } : {}) } };
+  const run = { ...res.run, id: old.id };   // id — метка браузера, в подпись не входит
   return { run, view: await api.view(run) };
 }

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 from typing import Any, Literal
 
@@ -19,9 +20,39 @@ from core import features, service
 from core.errors import InputError, NotFound
 
 # Запас до лимита Vercel Hobby (300 с на запрос): остаток доделывает следующий вызов клиента.
-BUDGET_S = float(os.environ.get("SOZVEZDIE_STEP_BUDGET_S", "240"))
+def _budget() -> float:
+    """Бюджет запроса расчёта из окружения; некорректное значение — не падение импорта, а значение по умолчанию."""
+    try:
+        value = float(os.environ.get("SOZVEZDIE_STEP_BUDGET_S", "240"))
+    except ValueError:
+        return 240.0
+    return value if 1 <= value <= 290 else 240.0
+
+
+BUDGET_S = _budget()
 
 app = FastAPI(title="Созвездие API", version="1.0")
+
+# Защита публичного развёртывания: размер записи и число одновременных тяжёлых исследований.
+MAX_BODY_BYTES = 8 * 1024 * 1024                       # запись P04 со своим сценарием — около 3 МБ
+HEAVY = threading.BoundedSemaphore(2)                  # what-if, frontier, stress, турнир — полные смены
+
+
+@app.middleware("http")
+async def limit_body(request, call_next):
+    size = request.headers.get("content-length", "0")
+    if not size.isdigit() or int(size) > MAX_BODY_BYTES:
+        return JSONResponse({"detail": "Запрос слишком большой: запись смены больше 8 МБ"}, status_code=413)
+    return await call_next(request)
+
+
+def heavy(fn, *args):
+    if not HEAVY.acquire(blocking=False):
+        raise HTTPException(429, "Сервер занят другим исследованием смены — повторите через минуту")
+    try:
+        return call(fn, *args)
+    finally:
+        HEAVY.release()
 
 Goal = Literal["priority", "revenue"]
 Algorithm = Literal["horizon-cpsat", "goal-greedy", "edf-baseline"]
@@ -245,22 +276,22 @@ def f_why_not(body: JobQuery):
 
 @app.post("/api/features/what-if")
 def f_what_if(body: RunOnly):
-    return call(features.what_if, body.run)
+    return heavy(features.what_if, body.run)
 
 
 @app.post("/api/features/frontier")
 def f_frontier(body: RunOnly):
-    return call(features.frontier, body.run)
+    return heavy(features.frontier, body.run)
 
 
 @app.post("/api/features/stress")
 def f_stress(body: Stress):
-    return call(features.stress_test, body.run, body.runs)
+    return heavy(features.stress_test, body.run, body.runs)
 
 
 @app.post("/api/features/tournament")
 def f_tournament(body: RunOnly):
-    return call(features.tournament, body.run)
+    return heavy(features.tournament, body.run)
 
 
 @app.post("/api/features/link")

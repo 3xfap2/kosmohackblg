@@ -15,3 +15,10 @@ def test_api_contract_and_invalid_json():
         assert client.post("/api/runs/event", content="{bad", headers={"Content-Type": "application/json"}).status_code == 422
         assert client.post("/api/runs/view", json={"run": {}}).status_code == 422
         assert client.post("/api/runs/view", json={"run": record}).json()["step"] == 0
+
+
+def test_api_rejects_oversized_body():
+    from fastapi.testclient import TestClient
+    from server.main import app, MAX_BODY_BYTES
+    r = TestClient(app).post("/api/runs/view", content=b"x" * (MAX_BODY_BYTES + 1), headers={"content-type": "application/json"})
+    assert r.status_code == 413

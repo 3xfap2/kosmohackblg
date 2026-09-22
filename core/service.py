@@ -1,6 +1,9 @@
 """Чистые функции над RunRecord. Учёт выполняет только официальная Session."""
 from __future__ import annotations
 import copy
+import hashlib
+import hmac
+import os
 from functools import lru_cache
 import math
 from pathlib import Path
@@ -14,6 +17,32 @@ from .messages import model_error
 from .planner import make_planner
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+# Подпись записи смены. Сервер без состояния: запись приходит от клиента в каждом запросе, и без подписи
+# клиент мог бы переписать историю (например, вставить сообщение задним числом). Подпись — HMAC-SHA256 по
+# содержимому записи, кроме id (метка в браузере) и самой подписи. Числа приводятся к единому виду:
+# JavaScript превращает 125.0 в 125, и без этого подпись ломалась бы при обычной пересылке через браузер.
+_SECRET = os.environ.get("SOZVEZDIE_RECORD_SECRET", "sozvezdie-dev-secret").encode()
+
+
+def _canon(x):
+    if isinstance(x, float) and x.is_integer():
+        return int(x)
+    if isinstance(x, dict):
+        return {k: _canon(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [_canon(v) for v in x]
+    return x
+
+
+def _signature(record):
+    body = {k: v for k, v in record.items() if k not in ("id", "signature")}
+    return hmac.new(_SECRET, digest(_canon(body)).encode(), hashlib.sha256).hexdigest()
+
+
+def _signed(record):
+    return {**record, "signature": _signature(record)}
 
 
 @lru_cache(maxsize=4)
@@ -97,10 +126,10 @@ def inspect_scenario(source):
 def create_run(source, goal, algorithm, parameters=None):
     s = _source(source)
     planner = _planner(algorithm, goal, parameters)
-    return {"schema": "sozvezdie-run-1", "id": uuid4().hex, "scenario": copy.deepcopy(source),
+    return _signed({"schema": "sozvezdie-run-1", "id": uuid4().hex, "scenario": copy.deepcopy(source),
         "scenario_hash": digest(s), "run_metadata": {**planner.metadata(), "goal_history": [{"step": 0, "goal": goal}]},
         "events": [], "rejected_events": [], "commands": [], "steps_executed": 0,
-        "planner_state": planner.to_state(), "notes": {}}
+        "planner_state": planner.to_state(), "notes": {}})
 
 
 def _restore(record):
@@ -109,6 +138,8 @@ def _restore(record):
             raise ValueError("Неверная схема записи запуска")
         if not isinstance(record["id"], str) or not record["id"]:
             raise ValueError("Нет идентификатора запуска")
+        if not hmac.compare_digest(str(record.get("signature", "")), _signature(record)):
+            raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или создана без подписи — пересчитайте смену")
         s = _source(record["scenario"])
         if digest(s) != record["scenario_hash"]:
             raise ValueError("Исходный сценарий изменился: хеш не совпадает")
@@ -151,7 +182,7 @@ def _pack(record, session, planner):
     result.update(commands=copy.deepcopy(session.commands), events=copy.deepcopy(session.events),
                   steps_executed=session.env.k, planner_state=planner.to_state())
     result["run_metadata"].update(planner.metadata())
-    return result
+    return _signed(result)
 
 
 def advance(record, until_step, budget_s=240):
@@ -181,7 +212,7 @@ def apply_event(record, event):
         message = f"Сообщение отклонено: {model_error(exc)}"
         result["rejected_events"].append({"received_at_step": session.env.k,
             "payload": copy.deepcopy(event), "error": message})
-        return result, message
+        return _signed(result), message
     return _pack(result, session, planner), None
 
 

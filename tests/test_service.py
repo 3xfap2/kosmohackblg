@@ -171,10 +171,34 @@ def test_budget_splits_without_changing_commands(monkeypatch):
 def test_comparison_checks_boundary_state():
     a = service.advance(fresh(), 1)
     b = service.fork(a)
-    # Та же исходная модель, но подмена выполненного префикса меняет физическое состояние.
+    # Подмена выполненного префикса: без подписи сервера запись не принимается вовсе…
     b["commands"] = []
-    comparison = service.compare(a, b)
+    with pytest.raises(InputError, match="Подпись записи"):
+        service.compare(a, b)
+    # …а если бы подпись совпала, сравнение всё равно увидело бы разное состояние на развилке.
+    comparison = service.compare(a, service._signed(b))
     assert not comparison["same_origin"]
+
+
+def test_record_signature_blocks_rewritten_history_but_survives_browser_roundtrip():
+    run = service.advance(service.create_run({"ref": "P01_intro"}, "priority", "goal-greedy"), 12)
+    forged = json.loads(json.dumps(run))
+    forged["events"].append({"id": "INJ", "at_step": 3, "type": "satellite_outage", "satellite_ids": ["S01"], "end_step": 9})
+    with pytest.raises(InputError, match="Подпись записи"):
+        service.view(forged)
+    # Браузер: 125.0 → 125 (JavaScript), другой id — подпись остаётся верной.
+    def js(x):
+        if isinstance(x, float) and x.is_integer():
+            return int(x)
+        if isinstance(x, dict):
+            return {k: js(v) for k, v in x.items()}
+        return [js(v) for v in x] if isinstance(x, list) else x
+    browser = js(json.loads(json.dumps(run)))
+    browser["id"] = "copy-in-browser"
+    assert service.view(browser)["step"] == 12
+    unsigned = {k: v for k, v in run.items() if k != "signature"}
+    with pytest.raises(InputError, match="Подпись записи"):
+        service.advance(unsigned, 13)
 
 
 @pytest.mark.parametrize("path", sorted(Path("data").glob("*.json")), ids=lambda p: p.stem)

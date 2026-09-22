@@ -217,4 +217,4 @@ replay(result: dict) -> dict                     # {match, summary, diff}
 | `GET /api/proof`, `GET /api/results` | — | строки `results/summary.json` (без расчёта) |
 | `GET /api/extended` | — | `results/extended_summary.json` — расширенная модель, отдельный эксперимент |
 | `/api/features/{impact,forecast,why-not,what-if,frontier,stress,link,passport,report,tournament}` | `{run, …}` | функции О7 (`core/features.py`), каждая исполняется официальной моделью |
-| `GET /api/ai/status`, `/api/ai/ask`, `/api/ai/event` | `{run, question}` / `{run, text}` | ИИ-ассистент: ответ сверяется с фактами журнала; черновик сообщения не применяется сам |
+| `GET /api/ai/status`, `/api/ai/ask`, `/api/ai/event` | `{run, question}` / `{run, text}` | ИИ-ассистент: идентификаторы и числа ответа должны быть в фактах журнала, иначе шаблонный ответ; черновик сообщения не применяется сам |

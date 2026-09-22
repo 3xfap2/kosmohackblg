@@ -135,7 +135,7 @@ export default function Results() {
                 <div className="duel-side muted small mono">
                   {adaptive.new_jobs_total ? <>заявки из сообщений выполнены: {frozen.new_jobs_completed?.length ?? 0} → {adaptive.new_jobs_completed?.length ?? 0} из {adaptive.new_jobs_total}<br /></> : null}
                   просрочено заданий {frozen.missed} → {adaptive.missed}<br />
-                  команд без допуска модели {frozen.plan_rejections} → {adaptive.plan_rejections}<br />
+                  предложений, отброшенных проверкой допуска до отправки модели: {frozen.plan_rejections} → {adaptive.plan_rejections}<br />
                   {goal === "priority" ? `выручка ${usd(frozen.revenue_usd)} → ${usd(adaptive.revenue_usd)}` : `срочные ${frozen.p3_done} → ${adaptive.p3_done}`}
                 </div>
               </div>
