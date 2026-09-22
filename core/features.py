@@ -66,6 +66,27 @@ def _delta(a, b):
     return {k: round(b[k] - a[k], 2) for k in ("p3_done", "jobs_done", "revenue_usd", "below_reserve_steps")}
 
 
+def _plan_diff(before, after, start, until):
+    """Что изменилось в плане: исполненные действия двух ветвей по шагам [start, until)."""
+    def label(r):
+        return r["requested"]["job_id"] if r["executed"] == "job" else r["executed"]
+    old = {(r["step"], r["satellite_id"]): label(r) for r in before.env.trace if start <= r["step"] < until}
+    new = {(r["step"], r["satellite_id"]): label(r) for r in after.env.trace if start <= r["step"] < until}
+    changed = sorted(key for key in old if old[key] != new.get(key))
+    first = {}
+    for step, sid in changed:
+        first.setdefault(sid, {"satellite_id": sid, "step": step, "before": old[(step, sid)], "after": new[(step, sid)]})
+    moved = {}   # задание сменило исполнителя
+    for plan in (old, new):
+        for (step, sid), what in plan.items():
+            if what not in ("idle", "calibrate"):
+                moved.setdefault(what, [set(), set()])[plan is new].add(sid)
+    reassigned = sorted(j for j, (a, b) in moved.items() if a and b and a != b)
+    return {"satellites_changed": len(first), "assignments_changed": len(changed),
+            "reassigned_jobs": reassigned[:20], "reassigned_count": len(reassigned),
+            "first_changes": sorted(first.values(), key=lambda x: (x["step"], x["satellite_id"]))[:12]}
+
+
 # ---------------------------------------------------------------- F1 + F3. Цена события и триаж заявки
 def event_impact(record, event, horizon=48):
     """Три продолжения из текущего состояния до одного шага:
@@ -111,6 +132,8 @@ def event_impact(record, event, horizon=48):
         "new_jobs": [dict(_brief(jobs[i]), done=i in re_done) for i in sorted(new_ids)],
         "displaced": [_brief(jobs[i]) for i in sorted(base_done - re_done) if i not in new_ids],
         "saved_jobs": [_brief(jobs[i]) for i in sorted(re_done - fr_done)],
+        # F11: что изменилось в плане после сообщения — ветвь «без события» против перестроенной.
+        "plan_changes": _plan_diff(base, replanned, k, until),
         "note": "Все три ветви исполнены моделью организаторов из одного состояния; будущие сообщения неизвестны.",
     }
 

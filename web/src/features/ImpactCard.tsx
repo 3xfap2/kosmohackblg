@@ -2,6 +2,8 @@ import type { BranchScore, Impact } from "../api/types";
 import { clock, usd } from "../format";
 
 // F1 + F3: три продолжения из одного состояния. Вывод формулируется словами — «что сохранено».
+// F11: что изменится в плане — первые изменённые назначения по спутникам.
+const act = (x: string) => (x === "idle" ? "ожидание" : x === "calibrate" ? "калибровка" : x);
 
 
 export default function ImpactCard({ r }: { r: Impact }) {
@@ -43,6 +45,23 @@ export default function ImpactCard({ r }: { r: Impact }) {
       )}
       {r.displaced.length > 0 && (
         <p className="small">Вытеснит: {r.displaced.map((j) => <span key={j.id} className="pill warn">{j.id} · P{j.priority} · {usd(j.value_usd)}</span>)}</p>
+      )}
+      {r.plan_changes && (
+        <div className="plan-diff">
+          <p className="small"><b>Что изменится в плане</b> <span className="muted">(ветвь «без события» против перестроенной)</span></p>
+          {r.plan_changes.assignments_changed === 0 ? <p className="muted small">Назначения не меняются.</p> : (
+            <>
+              <p className="muted small mono">спутников с другими назначениями: {r.plan_changes.satellites_changed} · изменённых назначений: {r.plan_changes.assignments_changed}
+                {r.plan_changes.reassigned_count > 0 && <> · заданий у другого исполнителя: {r.plan_changes.reassigned_count}</>}</p>
+              <div className="diff-rows mono small">
+                {r.plan_changes.first_changes.map((c) => (
+                  <div key={c.satellite_id}><span className="id">{c.satellite_id}</span><span className="muted">{clock(c.step)}</span>
+                    <span>{act(c.before)}</span><span className="muted">→</span><span>{act(c.after)}</span></div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       )}
       <p className="muted tiny">{r.note}</p>
     </div>

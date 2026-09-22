@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { advanceUntil, api } from "../api/client";
+import { advanceUntil, api, isStaleVersion, rebuildRun } from "../api/client";
 import { store } from "../api/store";
 import type { Algorithm, EventRecord, Forecast, Goal, Impact, JobView, RunRecord, RunView, Timeline } from "../api/types";
 import ImpactCard from "../features/ImpactCard";
@@ -26,6 +26,8 @@ export default function LiveRun() {
   const [target, setTarget] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
   const [tab, setTab] = useState<"control" | "event">("control");
   const [report, setReport] = useState(false);
   const [seek, setSeek] = useState<{ step: number; n: number } | undefined>();
@@ -46,7 +48,18 @@ export default function LiveRun() {
       const r = all.find((x) => x.id === id);
       if (!r) { setError("Смена не найдена в этом браузере"); return; }
       setRun(r); setTarget(Math.min(r.steps_executed + 12, 288));
-      try { await refresh(r); } catch (e) { setError((e as Error).message); }
+      try { await refresh(r); } catch (e) {
+        if (!isStaleVersion(e)) { setError((e as Error).message); return; }
+        // Смена рассчитана прежней версией алгоритма — пересчитываем автоматически с теми же входными данными.
+        try {
+          setRebuilding("Смена рассчитана прежней версией алгоритма — пересчитываем текущей…");
+          const res = await rebuildRun(r, (step) => setRebuilding(`Пересчёт текущей версией алгоритма: шаг ${step} из ${r.steps_executed}`));
+          await store.save(res.run);
+          setRun(res.run);
+          await refresh(res.run, res.view);
+          setNotice(`Смена пересчитана текущей версией алгоритма (${res.run.run_metadata.version}): тот же сценарий, цель и сообщения на тех же шагах, до ${clock(r.steps_executed)}. Итог может отличаться от прежней версии.`);
+        } catch (e2) { setError((e2 as Error).message); } finally { setRebuilding(null); }
+      }
     });
   }, [id, refresh]);
 
@@ -142,6 +155,7 @@ export default function LiveRun() {
     return `${window.location.origin}/console/demo?${q}`;
   }, [run]);
 
+  if (rebuilding) return <RunSkeleton title="Пересчёт смены" note={rebuilding} />;
   if (error && !view) return <p className="error">{error}</p>;
   if (!run || !view || !board) return <RunSkeleton />;
   const total = view.steps_total, k = run.steps_executed, done = k >= total;
@@ -197,6 +211,7 @@ export default function LiveRun() {
 
   return (
     <>
+      {notice && <p className="note rebuild-note">{notice} <button className="btn btn-sm" onClick={() => setNotice(null)}>Понятно</button></p>}
       <RunHeader run={run} view={view} busy={!!busy} forecast={forecast} suggestions={suggestions}
         onAdvance={go} onSeek={(step) => setSeek({ step, n: Date.now() })} onGoal={changeGoal} onFork={fork}
         onEvents={openEvents} onForecast={() => document.getElementById("forecast")?.scrollIntoView({ behavior: "smooth", block: "center" })} />

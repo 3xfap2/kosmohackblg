@@ -142,6 +142,10 @@ export interface Impact {
   without_event: BranchScore; replanned: BranchScore; old_plan: BranchScore;
   cost_of_event: ScoreDelta; saved_by_replanning: ScoreDelta;
   new_jobs: BriefJob[]; displaced: BriefJob[]; saved_jobs: BriefJob[]; note: string;
+  plan_changes?: {
+    satellites_changed: number; assignments_changed: number; reassigned_jobs: string[]; reassigned_count: number;
+    first_changes: { satellite_id: string; step: number; before: string; after: string }[];
+  };
 }
 export interface Alert { kind: "energy" | "p3" | "calibration"; severity: "high" | "medium" | "low"; step: number; text: string; satellite_id?: string; job_id?: string }
 export interface Forecast { from_step: number; until_step: number; alerts: Alert[]; summary: BranchScore; note: string }

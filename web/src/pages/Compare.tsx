@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, isStaleVersion, rebuildRun } from "../api/client";
 import { store } from "../api/store";
 import type { Comparison, RunRecord } from "../api/types";
 import TwinOrbits from "../features/TwinOrbits";
@@ -39,7 +39,16 @@ export default function Compare() {
     const ra = runs.find((r) => r.id === a), rb = runs.find((r) => r.id === b);
     if (!ra || !rb) return;
     setBusy(true); setError(null);
-    try { setCmp(await api.compare(ra, rb)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try {
+      try { setCmp(await api.compare(ra, rb)); }
+      catch (e) {
+        if (!isStaleVersion(e)) throw e;
+        // Одна из смен рассчитана прежней версией алгоритма — пересчитываем обе текущей и сравниваем.
+        const [na, nb] = await Promise.all([ra, rb].map(async (r) => { const x = (await rebuildRun(r)).run; await store.save(x); return x; }));
+        setRuns((all) => all.map((r) => (r.id === na.id ? na : r.id === nb.id ? nb : r)));
+        setCmp(await api.compare(na, nb));
+      }
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
   return (

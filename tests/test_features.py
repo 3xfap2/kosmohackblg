@@ -51,3 +51,14 @@ def test_scenario_experiments_and_passport(run):
     p = F.passport(run, "S01")
     assert p["steps"] == 24 and p["calibration_due_step"] >= 24
     assert F.shift_report(run)["markdown"].startswith("# Передача смены")
+
+
+def test_impact_shows_plan_changes_for_outage(run):
+    """F11: после отказа спутников их назначения в перестроенном плане меняются, и это видно по спутникам."""
+    ev = {"id": "T-3", "at_step": 24, "type": "satellite_outage", "satellite_ids": ["S01", "S02"], "end_step": 40}
+    diff = F.event_impact(run, ev, horizon=24)["plan_changes"]
+    assert diff["assignments_changed"] >= diff["satellites_changed"] >= 0
+    for c in diff["first_changes"]:
+        assert c["before"] != c["after"] and 24 <= c["step"] < 48
+        if c["satellite_id"] in ("S01", "S02") and c["step"] < 40:
+            assert c["after"] == "idle"     # недоступный спутник в перестроенном плане ждёт

@@ -89,3 +89,26 @@ export async function advanceUntil(
   }
   return res;
 }
+
+// Смена, рассчитанная прежней версией алгоритма, не продолжается (версия — часть воспроизводимости).
+// Пересчёт: тот же сценарий, начальная цель и алгоритм; те же принятые сообщения и смены цели на тех же шагах;
+// до того же шага. Отклонённые сообщения не повторяются. Идентификатор и родитель ветви сохраняются.
+export const isStaleVersion = (e: unknown) => /Версия планировщика изменилась/.test(String((e as Error)?.message ?? e));
+
+export async function rebuildRun(old: RunRecord, onProgress?: (step: number) => void): Promise<RunResponse> {
+  const meta = old.run_metadata;
+  const history = meta.goal_history ?? [];
+  let res = await api.create(old.scenario, history[0]?.goal ?? meta.goal, meta.algorithm);
+  const steps = [
+    ...old.events.map((e) => ({ step: e.at_step, apply: (r: RunRecord) => api.event(r, e) })),
+    ...history.slice(1).map((g) => ({ step: g.step, apply: (r: RunRecord) => api.setGoal(r, g.goal) })),
+  ].sort((a, b) => a.step - b.step);
+  const progress = (r: RunResponse) => onProgress?.(r.run.steps_executed);
+  for (const s of steps) {
+    if (res.run.steps_executed < s.step) res = await advanceUntil(res.run, s.step, progress);
+    res = await s.apply(res.run);
+  }
+  if (res.run.steps_executed < old.steps_executed) res = await advanceUntil(res.run, old.steps_executed, progress);
+  const run = { ...res.run, id: old.id, run_metadata: { ...res.run.run_metadata, ...(meta.parent ? { parent: meta.parent } : {}) } };
+  return { run, view: await api.view(run) };
+}

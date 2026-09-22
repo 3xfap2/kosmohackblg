@@ -482,3 +482,10 @@ textarea.input { resize: vertical; font-size: 12.5px; }
 }
 .res-table td:last-child, .res-table td .tiny { white-space: nowrap; }
 .ext-block { margin-top: 14px; }
+
+/* ---------- Что изменится в плане ---------- */
+.plan-diff { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.plan-diff p { margin: 4px 0; }
+.diff-rows { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.diff-rows > div { display: grid; grid-template-columns: 44px 48px 1fr 14px 1fr; gap: 6px; align-items: center; }
+.rebuild-note { margin: 16px 0 0; display: flex; align-items: center; gap: 12px; justify-content: space-between; }
