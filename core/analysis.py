@@ -1,4 +1,5 @@
 """Проверяемые границы выполнимости и объяснения по фактическому журналу."""
+from .availability import unavailable
 from collections import defaultdict
 from model.operations import replay_episode
 from .errors import InputError, NotFound
@@ -9,7 +10,7 @@ def impossibility(s, job):
     ids = job["eligible_satellites"]
     window = range(job["release_step"], job["deadline_step"])
     def available(sid, t):
-        return not any(f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"] for f in s["failures"])
+        return not unavailable(s, sid, t)
     if not any(available(sid, t) for sid in ids for t in window):
         code, proof = "satellite_unavailable", "Все допустимые исполнители недоступны на всём окне задания."
     else:
@@ -38,8 +39,7 @@ def _disrupted_by_event(session, job, rows):
     s = session.env.s
     ids = set(job["eligible_satellites"])
     def usable(sid, t):
-        return s["environment"][sid][job["kind"] + "_available"][t] and not any(
-            f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"] for f in s["failures"])
+        return s["environment"][sid][job["kind"] + "_available"][t] and not unavailable(s, sid, t)
     for ev in sorted(session.events, key=lambda e: e["at_step"]):
         at = ev["at_step"]
         if ev.get("type") not in ("satellite_outage", "close_downlink") or not ids & set(ev.get("satellite_ids", [])):
@@ -115,6 +115,47 @@ def job_views(session):
     return output
 
 
+def idle_reason(prefix, satellite_id, step, full_trace):
+    """Почему аппарат ждал на шаге: наблюдение по состоянию и открытым заданиям на этом шаге.
+    Это факт шага (что мешало), а не доказательство невыполнимости задания за всё окно."""
+    env, s = prefix.env, prefix.env.s
+    cap = env.sats[satellite_id]["capacity_wh"]
+    if env.state[satellite_id]["energy_wh"] < cap * s["model"]["reserve_soc_pct"] / 100 - 1e-9:
+        return "idle_energy_reserve", "заряд ниже резерва: модель допускает только ожидание"
+    open_jobs = [j for j in env.jobs.values() if j["release_step"] <= step < j["deadline_step"]
+                 and j["remaining_steps"] > 0 and satellite_id in j["eligible_satellites"]]
+    if not open_jobs:
+        return "idle_no_open_job", "нет открытых заданий, для которых аппарат — допустимый исполнитель"
+    at_step = [r for r in full_trace if r["step"] == step]
+    taken = {r["requested"]["job_id"] for r in at_step if r["executed"] == "job" and r["satellite_id"] != satellite_id}
+    barriers, allowed = defaultdict(int), []
+    for j in open_jobs:
+        ok, reason, _ = env.can_execute(satellite_id, {"action": "job", "job_id": j["id"]})
+        if not ok:
+            barriers[reason] += 1
+        elif j["id"] in taken:
+            barriers["taken"] += 1
+        else:
+            allowed.append(j)
+    if not allowed:
+        main = max(barriers, key=barriers.get)
+        text = {"no_contact": "нет связи для открытых заданий", "taken": "допустимые задания на этом шаге выполняли другие аппараты",
+                "calibration_required": "нужна калибровка", "thermal_limit": "температура вне допустимого диапазона",
+                "energy_reserve": "действие опустило бы заряд ниже резерва"}.get(main, REASONS.get(main, "ограничение модели"))
+        return f"idle_{main}", f"{text} (заданий: {barriers[main]} из {len(open_jobs)})"
+    limit = s["model"]["downlink_parallel_limit"]
+    downlinks = sum(r["executed"] == "job" and env.jobs[r["requested"]["job_id"]]["kind"] == "downlink" for r in at_step)
+    if all(j["kind"] == "downlink" for j in allowed) and downlinks >= limit:
+        return "idle_ground_capacity", f"канал на Землю занят: уже передают {downlinks} аппарата (лимит {limit})"
+    def contact(j):
+        return sum(any(s["environment"][x][j["kind"] + "_available"][t] and not unavailable(s, x, t) for x in j["eligible_satellites"])
+                   for t in range(step, j["deadline_step"]))
+    if all(contact(j) < j["remaining_steps"] or j["deadline_step"] - step < j["remaining_steps"] for j in allowed):
+        return "idle_hopeless_cut", "допустимые задания уже не успеть по сроку или шагам связи — не берутся (A10)"
+    return "idle_planner_choice", (f"решение алгоритма: было допустимых заданий — {len(allowed)}, но аппарат оставлен в ожидании "
+                                   "(порядок заданий и выбор исполнителя по цели и заряду)")
+
+
 def explanation(session, notes, job_id, satellite_id, step):
     if (job_id is None) == (satellite_id is None):
         raise InputError("Укажите либо задание, либо аппарат и выполненный шаг")
@@ -155,6 +196,10 @@ def explanation(session, notes, job_id, satellite_id, step):
         "consequence": f"Запрошено: {action_text(row['requested'])}; "
                        f"исполнено: {action_text({**row['requested'], 'action': row['executed']})}. "
                        f"Пояснение планировщика: {planner_note(notes.get(step, {}).get(satellite_id))}."}
+    if row["requested"].get("action", "idle") == "idle" and row["executed"] == "idle":
+        code, text = idle_reason(prefix, satellite_id, step, session.env.trace)
+        result.update(constraint=code, idle_reason=code,
+                      consequence=f"Ожидание на шаге {step}: {text}. Это наблюдение на шаге, а не доказательство невыполнимости.")
     if not prefix.env.available(satellite_id):
         failures = [f for f in prefix.env.s["failures"] if f["satellite_id"] == satellite_id
                     and f["start_step"] <= step < f["end_step"]]

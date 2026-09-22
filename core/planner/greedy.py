@@ -23,6 +23,7 @@
 """
 from __future__ import annotations
 
+from ..availability import unavailable
 from .base import Admission, Planner
 
 
@@ -50,10 +51,8 @@ class GoalGreedyPlanner(Planner):
     def _contact_steps(env, job, k) -> int:
         """Сколько шагов до срока хотя бы у одного допустимого исполнителя есть контакт
         и он не в известном периоде недоступности (v1.2: раньше отказы не учитывались)."""
-        failures = env.s["failures"]
         def usable(sid, t):
-            return env.s["environment"][sid][job["kind"] + "_available"][t] and not any(
-                f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"] for f in failures)
+            return env.s["environment"][sid][job["kind"] + "_available"][t] and not unavailable(env.s, sid, t)
         return sum(any(usable(sid, t) for sid in job["eligible_satellites"]) for t in range(k, job["deadline_step"]))
 
     def _key(self, env, job, k):

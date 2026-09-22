@@ -26,6 +26,7 @@ import copy
 
 from ortools.sat.python import cp_model
 
+from ..availability import unavailable
 from .base import Admission, Planner
 from .greedy import GoalGreedyPlanner
 from .physics import forecast
@@ -36,7 +37,7 @@ MILLS = 1000         # единица целевой функции — 0,001 д
 
 class HorizonPlanner(Planner):
     name = "horizon-cpsat"
-    version = "1.5"   # 1.5: эвристика v1.2 внутри (подсказка, страховка, запасной режим)
+    version = "1.6"   # 1.6: строго лексикографическая приоритетная цель; 1.5: эвристика v1.2 внутри
     defaults = {"horizon": 48, "replan_every": 6, "deterministic_limit": 0.5, "workers": 1,
                 "energy_value_usd_per_wh": 0.5, "seed": 7}
 
@@ -56,6 +57,12 @@ class HorizonPlanner(Planner):
                 raise ValueError(f"{key}: требуется конечное неотрицательное число")
         if settings["deterministic_limit"] == 0:
             raise ValueError("deterministic_limit должен быть положительным")
+        # Верхние границы: настройки приходят и через API, без них один запрос мог бы занять сервер надолго.
+        for key, top in (("horizon", 96), ("replan_every", 48), ("deterministic_limit", 5), ("energy_value_usd_per_wh", 10)):
+            if settings[key] > top:
+                raise ValueError(f"{key}: не больше {top}")
+        if settings["replan_every"] > settings["horizon"]:
+            raise ValueError("replan_every не может быть больше окна horizon")
         super().__init__(goal, **settings)
         self.plan: dict[int, dict[str, dict]] = {}
         self.plan_from = -1
@@ -136,8 +143,7 @@ class HorizonPlanner(Planner):
         pay_lo, pay_hi = model_p["payload_min_c"], model_p["payload_max_c"]
 
         def available(sid: str, t: int) -> bool:
-            return not any(f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"]
-                           for f in s["failures"])
+            return not unavailable(s, sid, t)
 
         m = cp_model.CpModel()
         # План эвристики по цели на том же окне: подсказка решателю (поиск стартует с хорошего
@@ -254,7 +260,15 @@ class HorizonPlanner(Planner):
                 m.Add(sum(dls) <= limit)
 
         # --- цель
-        p3_weight = 100_000 * MILLS if self.goal == "priority" else 0
+        # Приоритетная цель строго лексикографическая: вес одного задания P3 больше максимально возможной
+        # суммы всех остальных положительных слагаемых окна (выручка всех заданий + ценность остатка энергии),
+        # поэтому никакая выручка не перевешивает лишнее срочное задание (v1.6; раньше — фиксированные 100 000 $).
+        p3_weight = 0
+        if self.goal == "priority":
+            bound = sum(int(round(env.jobs[jid]["value_usd"] * MILLS)) for jid in job_vars)
+            if k1 < n:
+                bound += energy_coef * sum(int(v["capacity_wh"] * SCALE) + 1 for v in env.sats.values())
+            p3_weight = bound + 1
         for jid, y in job_vars.items():
             j = env.jobs[jid]
             w = int(round(j["value_usd"] * MILLS)) + (p3_weight if j["priority"] == 3 else 0)

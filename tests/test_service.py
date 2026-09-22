@@ -249,3 +249,25 @@ def test_started_job_disrupted_by_later_message_is_problem_limit():
     e = service.explain(run, job_id="DIS-1")
     assert e["loss"]["group"] == "problem_limit" and e["loss"]["code"] == "disrupted_by_event"
     assert "OUT" in e["consequence"]
+
+
+def test_idle_satellite_gets_concrete_reason():
+    """Простой объясняется наблюдением на шаге (нет заданий / нет связи / заняты другими / A10 / …), а не «не доказано»."""
+    run = service.advance(service.create_run({"ref": "P02_shift"}, "priority", "goal-greedy"), 20)
+    reasons = set()
+    for i in range(1, 49):
+        e = service.explain(run, satellite_id=f"S{i:02d}", step=11)
+        if "idle_reason" in e:
+            reasons.add(e["idle_reason"])
+            assert "не доказан" not in e["consequence"]
+    assert reasons and reasons <= {"idle_energy_reserve", "idle_no_open_job", "idle_no_contact", "idle_taken",
+                                   "idle_calibration_required", "idle_thermal_limit", "idle_ground_capacity",
+                                   "idle_hopeless_cut", "idle_planner_choice"}
+
+
+def test_parent_label_not_signed_but_history_is():
+    """parent — метка ветви в браузере: при пересчёте её переносят, подпись остаётся верной."""
+    run = service.advance(service.create_run({"ref": "P01_intro"}, "priority", "goal-greedy"), 6)
+    moved = json.loads(json.dumps(run))
+    moved["run_metadata"]["parent"] = {"run_id": "old-parent", "fork_step": 3}
+    assert service.view(moved)["step"] == 6

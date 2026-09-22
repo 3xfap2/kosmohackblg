@@ -1,7 +1,10 @@
-"""Проверяет сводку и явные числовые ссылки в Markdown.
+"""Сверка опубликованных чисел с результатами: python -m scripts.check_numbers.
 
-Формат ссылки: {{result:runs.KEY.summary.revenue_usd=123.0}}.
-Числа без таких ссылок не считаются автоматически проверенными.
+Два способа:
+1. Утверждения CLAIMS: каждое число вычисляется из results/*.json, подставляется в фразу, и фраза
+   должна дословно стоять в README.md / CRITERIA.md. Поменялись результаты, а документ нет — ошибка.
+2. Явные маркеры {{result:runs.KEY.summary.поле=значение}} в Markdown (если используются).
+Плюс: сводка каждой выгрузки results/runs/<key>.json совпадает с results/summary.json.
 """
 import json
 from pathlib import Path
@@ -11,15 +14,84 @@ ROOT = Path(__file__).resolve().parents[1]
 PATTERN = re.compile(r"\{\{result:([^=]+)=([^}]+)\}\}")
 
 
+def usd(x):
+    return "$" + f"{round(x):,}".replace(",", " ")
+
+
+def claims(root=ROOT):
+    """(файл, фраза) — фраза собирается из результатов."""
+    runs = json.loads((root / "results/summary.json").read_text(encoding="utf-8"))["runs"]
+    ext = json.loads((root / "results/extended_summary.json").read_text(encoding="utf-8"))["runs"]
+    m = lambda key: runs[key]["summary"]
+    p3 = lambda key: f"{m(key)['critical_jobs_completed_on_time']} / {m(key)['critical_jobs_due']}"
+    rev = lambda key: usd(m(key)["revenue_usd"])
+    k = lambda s, a, g: f"{s}__{a}__{g}"
+    out = []
+    for label, s in (("P02 обычная смена", "P02_shift"), ("P03 дефицит энергии", "P03_energy"), ("P04 перегрузка", "P04_demand")):
+        out.append(("README.md", f"| {label} | {p3(k(s, 'edf-baseline', 'priority'))} | {p3(k(s, 'goal-greedy', 'priority'))} | "
+                                 f"{p3(k(s, 'horizon-cpsat', 'priority'))} |"))
+    out.append(("README.md", "P02 {} → {}, P03 {} → {}, P04 {} → {}".format(
+        *(x for s in ("P02_shift", "P03_energy", "P04_demand")
+          for x in (rev(k(s, "edf-baseline", "revenue")), rev(k(s, "horizon-cpsat", "revenue")))))))
+    out.append(("README.md", f"P02 {rev(k('P02_shift', 'horizon-cpsat', 'revenue'))} против {rev(k('P02_shift', 'horizon-cpsat', 'priority'))}"))
+    pr, rv = m(k("P04_demand", "horizon-cpsat", "priority")), m(k("P04_demand", "horizon-cpsat", "revenue"))
+    price = f"+{usd(rv['revenue_usd'] - pr['revenue_usd'])} выручки за −{pr['critical_jobs_completed_on_time'] - rv['critical_jobs_completed_on_time']} срочных"
+    out += [("README.md", price), ("CRITERIA.md", price)]
+    ad, fr = runs["P02_events__adaptive__priority"], runs["P02_events__frozen__priority"]
+    events = (f"срочные {fr['summary']['critical_jobs_completed_on_time']} → {ad['summary']['critical_jobs_completed_on_time']}, "
+              f"просрочено {fr['summary']['jobs_due_missed']} → {ad['summary']['jobs_due_missed']}")
+    out += [("README.md", events), ("CRITERIA.md", events)]
+    out.append(("CRITERIA.md", f"заявки из сообщений {len(fr['new_jobs_completed'])} → {len(ad['new_jobs_completed'])} из {ad['new_jobs_total']}"))
+    out.append(("CRITERIA.md", f"P04: {p3(k('P04_demand', 'edf-baseline', 'priority')).split(' /')[0]} → "
+                               f"{p3(k('P04_demand', 'horizon-cpsat', 'priority')).split(' /')[0]} срочных в срок, "
+                               f"{m(k('P04_demand', 'edf-baseline', 'priority'))['jobs_completed']} → "
+                               f"{m(k('P04_demand', 'horizon-cpsat', 'priority'))['jobs_completed']} выполнено, работа в сорванных "
+                               f"{m(k('P04_demand', 'edf-baseline', 'priority'))['work_steps_in_missed_jobs']} → "
+                               f"{m(k('P04_demand', 'horizon-cpsat', 'priority'))['work_steps_in_missed_jobs']}"))
+    out.append(("CRITERIA.md", f"ниже резерва {m(k('P03_energy', 'edf-baseline', 'priority'))['below_reserve_satellite_steps']} → "
+                               f"{m(k('P03_energy', 'horizon-cpsat', 'priority'))['below_reserve_satellite_steps']}"))
+    below = (f"{m(k('P04_demand', 'horizon-cpsat', 'priority'))['below_reserve_satellite_steps']} против "
+             f"{m(k('P04_demand', 'edf-baseline', 'priority'))['below_reserve_satellite_steps']}")
+    out += [("README.md", below), ("CRITERIA.md", below)]
+    def accepted(goal):
+        a, b, c = (runs[k(s, "horizon-cpsat", goal)]["cpsat_selected_solves"] for s in ("P02_shift", "P03_energy", "P04_demand"))
+        return f"{a}, {b} и {c}"
+    out.append(("CRITERIA.md", f"CP-SAT принят в {accepted('priority')} из 48 перестроек (приоритет) и в {accepted('revenue')} (коммерция)"))
+    n = len(runs)
+    out.append(("README.md", f"{n} из {n} прогонов повторены моделью организаторов"))
+    out.append(("CRITERIA.md", f"{n} из {n} прогонов повторены моделью с тем же итогом"))
+    edf = runs["P02_events__edf-baseline__priority"]["summary"]
+    out.append(("README.md", f"Простое правило с теми же сообщениями: срочные {edf['critical_jobs_completed_on_time']}, просрочено {edf['jobs_due_missed']}"))
+    research = json.loads((root / "results/research.json").read_text(encoding="utf-8"))
+    for ref in ("P02_shift", "P04_demand"):
+        st = research["stress"][ref]
+        assert st["wins"] == st["runs"] == 12, f"стресс-тест {ref}: {st['wins']} из {st['runs']} — обновить README/CRITERIA"
+    link = lambda v: f"{ext[f'P02_shift__{v}__priority']['ext_link_coverage'] * 100:.1f}".replace(".", ",")
+    out.append(("CRITERIA.md", f"{link('goal-greedy+attitude')} % → {link('goal-greedy+attitude+link')} %"))
+    out.append(("README.md", f"{link('goal-greedy+attitude')} % → {link('goal-greedy+attitude+link')} %"))
+    return out
+
+
 def check(root=ROOT):
     summary = json.loads((root / "results/summary.json").read_text(encoding="utf-8"))
     errors, count = [], 0
+    runs_dir = root / "results/runs"
     for key, row in summary["runs"].items():
-        record = json.loads((root / "results/runs" / (key + ".json")).read_text(encoding="utf-8"))
-        if row["summary"] != record["summary"]:
+        path = runs_dir / (key + ".json")
+        if not path.exists():
+            errors.append(f"{key}: нет выгрузки results/runs/{key}.json")
+            continue
+        if row["summary"] != json.loads(path.read_text(encoding="utf-8"))["summary"]:
             errors.append(f"{key}: сводка расходится с экспортом")
-    for file in [root / "README.md", *sorted((root / "docs").glob("*.md")),
+    if (root / "results/extended_summary.json").exists() and (root / "README.md").exists():
+        for name, phrase in claims(root):
+            count += 1
+            if phrase not in (root / name).read_text(encoding="utf-8"):
+                errors.append(f"{name}: нет фразы с актуальными числами — «{phrase}»")
+    for file in [root / "README.md", root / "CRITERIA.md", *sorted((root / "docs").glob("*.md")),
                  *sorted((root / "results").glob("*.md"))]:
+        if not file.exists():
+            continue
         content = file.read_text(encoding="utf-8")
         for match in PATTERN.finditer(content):
             count += 1
@@ -40,7 +112,5 @@ if __name__ == "__main__":
     errors, count = check()
     for error in errors:
         print(error)
-    print(f"Проверено числовых ссылок: {count}; ошибок: {len(errors)}")
-    if not count:
-        print("Числа в документах пока не размечены; их согласованность не подтверждена.")
+    print(f"Проверено числовых утверждений: {count}; ошибок: {len(errors)}")
     raise SystemExit(bool(errors))

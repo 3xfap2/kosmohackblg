@@ -205,7 +205,8 @@ def extended_metrics(env: ExtendedEnvironment) -> dict:
             "ext_longest_link_gap_steps": gaps}
 
 
-def replay_extended(scenario: dict, events: list[dict], commands: list[dict], params: dict | None = None) -> ExtendedSession:
+def replay_extended(scenario: dict, events: list[dict], commands: list[dict], params: dict | None = None,
+                    steps: int | None = None) -> ExtendedSession:
     """Повтор сохранённой смены в расширенной модели (события — на своих шагах, до команд)."""
     by_step: dict[int, dict] = {}
     for c in commands:
@@ -213,7 +214,8 @@ def replay_extended(scenario: dict, events: list[dict], commands: list[dict], pa
     ev: dict[int, list] = {}
     for e in events:
         ev.setdefault(e["at_step"], []).append(e)
-    last = max([c["step"] + 1 for c in commands] + [0])
+    # До заданного числа шагов (по умолчанию — вся смена): последние шаги ожидания не теряются.
+    last = scenario["time"]["steps"] if steps is None else steps
     session = ExtendedSession(scenario, params=params)
     while session.env.k < last:
         for e in ev.get(session.env.k, []):

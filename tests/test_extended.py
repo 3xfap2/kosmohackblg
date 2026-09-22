@@ -62,7 +62,7 @@ def test_link_guard_raises_link_coverage_and_replays():
     guard = run(ExtendedSession(s), make_planner("goal-greedy", link_guard=True), 96)
     assert guard.summary()["ext_link_coverage"] > plain.summary()["ext_link_coverage"]
     assert guard.summary()["blocked_command_count"] == 0
-    again = replay_extended(s, [], guard.commands)
+    again = replay_extended(s, [], guard.commands, steps=96)
     assert again.summary() == guard.summary()
 
 

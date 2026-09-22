@@ -17,8 +17,8 @@ EVENTS = json.loads((ROOT / "examples" / "events_demo.json").read_text(encoding=
 EVENTS = EVENTS["events"] if isinstance(EVENTS, dict) else EVENTS
 
 
-def shift(events, until):
-    rec = service.create_run({"ref": "P02_shift"}, "priority", "goal-greedy")
+def shift(events, until, algorithm="goal-greedy"):
+    rec = service.create_run({"ref": "P02_shift"}, "priority", algorithm)
     for e in sorted(events, key=lambda e: e["at_step"]):
         rec, err = service.apply_event(service.advance(rec, e["at_step"]), e)
         assert err is None, err
@@ -45,3 +45,12 @@ def test_commands_before_each_event_do_not_depend_on_it():
         assert before(full, e["at_step"]) == before(without, e["at_step"]), e["id"]
     # После получения сообщения учитываются: без них смена идёт иначе.
     assert digest(full["commands"]) != digest(shift([], last)["commands"])
+
+
+def test_cpsat_commands_before_event_do_not_depend_on_it():
+    """То же для основного метода (CP-SAT, детерминированный лимит): первые два сообщения, до шага 84."""
+    ordered = sorted(EVENTS, key=lambda e: e["at_step"])[:2]
+    runs = [shift(ordered[:i], 84, "horizon-cpsat") for i in range(len(ordered) + 1)]
+    for i, e in enumerate(ordered):
+        assert before(runs[-1], e["at_step"]) == before(runs[i], e["at_step"]), e["id"]
+    assert digest(runs[-1]["commands"]) != digest(runs[0]["commands"])

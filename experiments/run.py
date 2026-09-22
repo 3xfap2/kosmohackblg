@@ -1,5 +1,6 @@
 """Воспроизводимые эксперименты: python -m experiments.run [--repeat]."""
 import argparse
+import hashlib
 from collections import Counter
 import json
 from pathlib import Path
@@ -95,16 +96,20 @@ def main():
             frozen = {}
             for c in baseline["commands"]:
                 frozen.setdefault(c["step"], {})[c["satellite_id"]] = {k: v for k, v in c.items() if k not in ("step", "satellite_id")}
-            for mode in ("adaptive", "frozen"):
+            # adaptive — основной метод с перестройкой; frozen — старый план основного метода;
+            # edf-baseline и goal-greedy — простое правило и эвристика с теми же сообщениями (сравнение с правилом после событий).
+            for mode in ("adaptive", "frozen", "edf-baseline", "goal-greedy"):
+                algorithm = mode if mode in ("edf-baseline", "goal-greedy") else "horizon-cpsat"
                 key = f"P02_events__{mode}__{goal}"
-                result, stats, elapsed = episode(scenario, "horizon-cpsat", goal, events,
+                result, stats, elapsed = episode(scenario, algorithm, goal, events,
                                                 frozen if mode == "frozen" else None)
                 if args.repeat:
-                    other, _, _ = episode(scenario, "horizon-cpsat", goal, events,
+                    other, _, _ = episode(scenario, algorithm, goal, events,
                                            frozen if mode == "frozen" else None)
                     assert digest(result) == digest(other)
                     stats["repeat_match"] = True
-                stats.update(scenario_id=scenario["meta"]["id"], goal=goal, algorithm="horizon-cpsat", mode=mode)
+                stats.update(scenario_id=scenario["meta"]["id"], goal=goal, algorithm=algorithm,
+                             mode="frozen" if mode == "frozen" else "adaptive")
                 # Что стало с заданиями из сообщений: старый план о них не знает.
                 added = [j["id"] for e in events if e["type"] == "add_jobs" for j in e["jobs"]]
                 done = {r["completed_job"] for r in result["trace"] if r["completed_job"]}
@@ -120,6 +125,14 @@ def main():
     previous = json.loads(timing_path.read_text()) if timing_path.exists() else {}
     previous.update(timings)
     timing_path.write_text(json.dumps(previous, indent=2, sort_keys=True), encoding="utf-8")
+    # Манифест: SHA-256 каждой сохранённой выгрузки — проверка, что файлы results/runs не подменены.
+    lines = [f"{hashlib.sha256(f.read_bytes()).hexdigest()}  runs/{f.name}" for f in sorted((output / "runs").glob("*.json"))]
+    (output / "MANIFEST.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # Входы: модель организаторов, сценарии и сообщения, на которых получены результаты.
+    root = Path(__file__).resolve().parents[1]
+    inputs = sorted([*root.glob("model/*.py"), *root.glob("data/*.json"), *root.glob("examples/*.json")])
+    lines = [f"{hashlib.sha256(f.read_bytes()).hexdigest()}  {f.relative_to(root).as_posix()}" for f in inputs]
+    (output / "INPUTS.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

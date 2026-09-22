@@ -35,14 +35,17 @@ app = FastAPI(title="Созвездие API", version="1.0")
 
 # Защита публичного развёртывания: размер записи и число одновременных тяжёлых исследований.
 MAX_BODY_BYTES = 8 * 1024 * 1024                       # запись P04 со своим сценарием — около 3 МБ
-HEAVY = threading.BoundedSemaphore(2)                  # what-if, frontier, stress, турнир — полные смены
+HEAVY = threading.BoundedSemaphore(3)                  # исследования и ветви-оценки: не больше трёх одновременно
 
 
 @app.middleware("http")
 async def limit_body(request, call_next):
-    size = request.headers.get("content-length", "0")
-    if not size.isdigit() or int(size) > MAX_BODY_BYTES:
-        return JSONResponse({"detail": "Запрос слишком большой: запись смены больше 8 МБ"}, status_code=413)
+    size = request.headers.get("content-length")
+    if size is None and request.method in ("POST", "PUT", "PATCH"):
+        # Тело без длины (chunked) не принимаем: размер нельзя проверить до чтения.
+        return JSONResponse({"detail": "Укажите длину запроса (Content-Length)"}, status_code=411)
+    if size is not None and (not size.isdigit() or int(size) > MAX_BODY_BYTES):
+        return JSONResponse({"detail": "Запрос слишком большой: запись смены больше 8 МБ (на Vercel лимит платформы — 4,5 МБ)"}, status_code=413)
     return await call_next(request)
 
 
@@ -261,17 +264,17 @@ class Stress(RunOnly):
 
 @app.post("/api/features/impact")
 def f_impact(body: Impact):
-    return call(features.event_impact, body.run, body.event, body.horizon)
+    return heavy(features.event_impact, body.run, body.event, body.horizon)
 
 
 @app.post("/api/features/forecast")
 def f_forecast(body: RunOnly):
-    return call(features.forecast, body.run)
+    return heavy(features.forecast, body.run)
 
 
 @app.post("/api/features/why-not")
 def f_why_not(body: JobQuery):
-    return call(features.why_not, body.run, body.job_id)
+    return heavy(features.why_not, body.run, body.job_id)
 
 
 @app.post("/api/features/what-if")

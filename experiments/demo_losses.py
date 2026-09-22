@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 
 from core import service
-from core.service import _restore
+from core.availability import unavailable
+from core.service import restore as _restore
 
 ROOT = Path(__file__).resolve().parents[1]
 STOP = 144
@@ -36,8 +37,7 @@ def main():
         window = range(job["release_step"], job["deadline_step"])
         out = [f for f in env.s["failures"] if f["satellite_id"] in job["eligible_satellites"]]
         def usable(sid, t):
-            return env.s["environment"][sid][kind][t] and not any(
-                f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"] for f in env.s["failures"])
+            return env.s["environment"][sid][kind][t] and not unavailable(env.s, sid, t)
         contact = [t for t in window if any(usable(sid, t) for sid in job["eligible_satellites"])]
         e = service.explain(run, job_id=jid)
         rows.append({"job_id": jid, "kind": job["kind"], "priority": job["priority"],

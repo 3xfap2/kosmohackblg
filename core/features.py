@@ -19,7 +19,8 @@ from .errors import InputError
 from .messages import model_error
 from .planner import make_planner
 from .planner.base import Admission
-from .service import _restore, _source
+from .availability import unavailable
+from .service import restore as _restore, source as _source
 
 HEURISTIC = "goal-greedy"
 
@@ -37,8 +38,10 @@ def _run(session, planner, until, forced=None):
 
 
 def _score(session, start, until):
-    """Итог по заданиям со сроком в (start, until] и заряду на выполненных шагах."""
-    jobs = [j for j in session.env.jobs.values() if start < j["deadline_step"] <= until]
+    """Итог по заданиям со сроком в (start, until], ещё не выполненным к start, и заряду на шагах ветви.
+    Задания, завершённые до развилки, не входят ни в одну ветвь — показатели относятся к продолжению."""
+    jobs = [j for j in session.env.jobs.values() if start < j["deadline_step"] <= until
+            and (j["completed_step"] is None or j["completed_step"] > start)]
     done = [j for j in jobs if j["completed_step"] is not None]
     reserve = session.env.s["model"]["reserve_soc_pct"]
     rows = [r for r in session.env.trace if start <= r["step"] < until]
@@ -195,7 +198,9 @@ def forecast(record, horizon=24):
         if j["priority"] == 3 and k < j["deadline_step"] <= until and j["completed_step"] is None:
             proof = impossibility(ahead.env.s, j)
             alerts.append({"kind": "p3", "severity": "high", "step": j["deadline_step"], "job_id": j["id"],
-                           "text": f"{j['id']} (P3) не успевает к {j['deadline_step']}" + (" — невыполнимо по контактам" if proof else "")})
+                           "text": f"{j['id']} (P3) не успевает к {j['deadline_step']}" + (" — " + {"no_contact_steps": "невыполнимо: нет шагов связи в окне", "insufficient_contact_steps": "невыполнимо: мало шагов связи в окне",
+                                    "satellite_unavailable": "невыполнимо: исполнители недоступны", "energy_bound": "невыполнимо по энергии"}.get(proof["code"], "невыполнимо")
+                                   if proof else "")})
     valid = ahead.env.s["model"]["calibration_valid_steps"]
     for sid, st in session.env.state.items():
         due = k + max(0, valid - st["calibration_age_steps"])
@@ -233,7 +238,9 @@ def why_not(record, job_id):
     cf = replay_episode(s, events, [c for c in record["commands"] if c["step"] < start], start)
     actual = replay_episode(s, [e for e in record["events"] if e["at_step"] <= until],
                             [c for c in record["commands"] if c["step"] < until], until)
-    alt = make_planner(planner.name, planner.goal, **planner.params)
+    history = record["run_metadata"].get("goal_history") or [{"step": 0, "goal": planner.goal}]
+    goal_then = [h["goal"] for h in history if h["step"] <= start][-1:] or [planner.goal]
+    alt = make_planner(planner.name, goal_then[0], **planner.params)
 
     def forced(sess):
         for e in later:
@@ -385,7 +392,8 @@ def stress_test(record, runs=12, seed=7):
         vals = [r[who][key] for r in rows]
         return {"min": min(vals), "median": statistics.median(vals), "max": max(vals)}
 
-    wins = sum((r["ours"]["p3_done"], r["ours"]["revenue_usd"]) > (r["baseline"]["p3_done"], r["baseline"]["revenue_usd"]) for r in rows)
+    key = (lambda x: (x["p3_done"], x["revenue_usd"])) if goal == "priority" else (lambda x: x["revenue_usd"])
+    wins = sum(key(r["ours"]) > key(r["baseline"]) for r in rows)   # победа — по цели смены
     return {"seed": seed, "runs": runs, "goal": goal, "rows": rows, "wins": wins,
             "ours": {"p3_done": stats("p3_done", "ours"), "revenue_usd": stats("revenue_usd", "ours")},
             "baseline": {"p3_done": stats("p3_done", "baseline"), "revenue_usd": stats("revenue_usd", "baseline")},
@@ -396,7 +404,8 @@ def stress_test(record, runs=12, seed=7):
 def link_continuity(record):
     session, _ = _restore(record)
     env, k, n = session.env, session.env.k, session.env.s["time"]["steps"]
-    avail = [any(env.s["environment"][sid]["downlink_available"][t] for sid in env.sats) for t in range(n)]
+    avail = [any(env.s["environment"][sid]["downlink_available"][t] and not unavailable(env.s, sid, t) for sid in env.sats)
+             for t in range(n)]
     used = [False] * n
     for r in env.trace:
         if r["executed"] == "job" and env.jobs[r["requested"]["job_id"]]["kind"] == "downlink":
@@ -424,7 +433,7 @@ def passport(record, satellite_id):
     cap = env.sats[satellite_id]["capacity_wh"]
     reserve = env.s["model"]["reserve_soc_pct"]
     rows = [r for r in env.trace if r["satellite_id"] == satellite_id]
-    socs = [100 * r["energy_after_wh"] / cap for r in rows]
+    socs = [env.sats[satellite_id]["initial_soc_pct"]] + [100 * r["energy_after_wh"] / cap for r in rows]
     valid = env.s["model"]["calibration_valid_steps"]
     age = env.state[satellite_id]["calibration_age_steps"]
     return {

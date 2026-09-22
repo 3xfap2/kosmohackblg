@@ -23,7 +23,26 @@ ROOT = Path(__file__).resolve().parents[1]
 # клиент мог бы переписать историю (например, вставить сообщение задним числом). Подпись — HMAC-SHA256 по
 # содержимому записи, кроме id (метка в браузере) и самой подписи. Числа приводятся к единому виду:
 # JavaScript превращает 125.0 в 125, и без этого подпись ломалась бы при обычной пересылке через браузер.
-_SECRET = os.environ.get("SOZVEZDIE_RECORD_SECRET", "sozvezdie-dev-secret").encode()
+def _record_secret() -> bytes:
+    """Секрет подписи. На Vercel обязателен из окружения (все экземпляры должны подписывать одинаково);
+    локально без переменной — случайный, создаётся один раз в .local_record_secret (вне git)."""
+    value = os.environ.get("SOZVEZDIE_RECORD_SECRET", "")
+    if value:
+        return value.encode()
+    if os.environ.get("VERCEL"):
+        raise RuntimeError("SOZVEZDIE_RECORD_SECRET не задан: на развёртывании подпись записей обязательна")
+    path = ROOT / ".local_record_secret"
+    try:
+        if not path.exists():
+            import secrets
+            path.write_text(secrets.token_hex(32), encoding="utf-8")
+        return path.read_text(encoding="utf-8").strip().encode()
+    except OSError:
+        import secrets
+        return secrets.token_hex(32).encode()   # только на время процесса
+
+
+_SECRET = _record_secret()
 
 
 def _canon(x):
@@ -38,6 +57,9 @@ def _canon(x):
 
 def _signature(record):
     body = {k: v for k, v in record.items() if k not in ("id", "signature")}
+    if isinstance(body.get("run_metadata"), dict):
+        # parent не входит в подпись: сравнение всё равно проверяет общее состояние повтором префикса
+        body["run_metadata"] = {k: v for k, v in body["run_metadata"].items() if k != "parent"}
     return hmac.new(_SECRET, digest(_canon(body)).encode(), hashlib.sha256).hexdigest()
 
 
@@ -139,7 +161,7 @@ def _restore(record):
         if not isinstance(record["id"], str) or not record["id"]:
             raise ValueError("Нет идентификатора запуска")
         if not hmac.compare_digest(str(record.get("signature", "")), _signature(record)):
-            raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или создана без подписи — пересчитайте смену")
+            raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или подписана другим ключом сервера — начните новый расчёт")
         s = _source(record["scenario"])
         if digest(s) != record["scenario_hash"]:
             raise ValueError("Исходный сценарий изменился: хеш не совпадает")
@@ -231,7 +253,7 @@ def fork(record, goal=None, algorithm=None):
     session, planner = _restore(record)
     goal = planner.goal if goal is None else goal
     algorithm = planner.name if algorithm is None else algorithm
-    result = set_goal(record, goal)
+    result = set_goal(record, goal) if goal != planner.goal else copy.deepcopy(record)
     if algorithm != planner.name:
         planner = _planner(algorithm, goal)
     else:
@@ -354,3 +376,8 @@ def replay(result):
         return {"match": not diff, "summary": actual, "diff": diff}
     except (ValueError, KeyError, TypeError, OverflowError) as exc:
         raise InputError(f"Не удалось воспроизвести расчёт: {model_error(exc)}") from exc
+
+
+# Публичные имена для функций О7 (core/features.py): восстановление смены и чтение сценария.
+restore = _restore
+source = _source
