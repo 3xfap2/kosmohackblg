@@ -8,6 +8,7 @@ import Gantt from "./Gantt";
 import JobsTable from "./JobsTable";
 import OrbitView from "./OrbitView";
 import SocChart from "./SocChart";
+import TempChart from "./TempChart";
 
 // Общая панель смены: одинаково для демо и живого запуска. Все числа — из RunView ядра.
 export default function RunDashboard({ view: v, jobs, board, explain, initialStep, side, after, whyNot, passport, onIntervene, interveneStep, shareUrl, seek }: {
@@ -49,6 +50,12 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
   }, [seek]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const satCells = useMemo(() => board.cells.filter((c) => c.satellite_id === sat), [board, sat]);
+  // Загрузка по аппаратам (ТЗ: «загрузка аппаратов»): доля выполненных шагов с заданием.
+  const load = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of board.cells) if (c.executed === "job") m[c.satellite_id] = (m[c.satellite_id] ?? 0) + 1;
+    return board.satellites.map((sid) => ({ sid, share: board.executed ? (m[sid] ?? 0) / board.executed : 0 }));
+  }, [board]);
 
   return (
     <>
@@ -93,6 +100,19 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
             </div>
             <SocChart cells={satCells} dark={board.dark[sat] ?? ""} steps={board.steps} />
             <p className="muted small">Пунктир: жёлтый — резерв 30 % (ниже него задания и калибровка не допускаются), красный — критический 20 %.</p>
+            <h3 className="chart-sub">Температура <span className="id">{sat}</span></h3>
+            <TempChart cells={satCells} dark={board.dark[sat] ?? ""} steps={board.steps} />
+            <p className="muted small">Пунктир — допустимый диапазон полезной нагрузки −5…45 °C: вне его модель не допускает задания и калибровку.</p>
+            <h3 className="chart-sub">Загрузка аппаратов <span className="muted small">— доля выполненных шагов с заданием</span></h3>
+            <div className="load-grid">
+              {load.map((l) => (
+                <button key={l.sid} className={"load-cell" + (l.sid === sat ? " on" : "")} onClick={() => setSat(l.sid)}
+                  title={`${l.sid}: ${(l.share * 100).toFixed(0)}%`}>
+                  <span className="mono">{l.sid}</span><i style={{ height: `${Math.max(2, l.share * 100)}%` }} />
+                  <b className="mono">{(l.share * 100).toFixed(0)}</b>
+                </button>
+              ))}
+            </div>
           </section>
 
           <section className="card" id="jobs">

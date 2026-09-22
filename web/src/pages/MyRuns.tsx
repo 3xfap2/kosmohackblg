@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import { store } from "../api/store";
 import type { RunRecord } from "../api/types";
 import { ALGO, GOAL, clock } from "../format";
@@ -9,7 +10,13 @@ export default function MyRuns() {
   const nav = useNavigate();
   const [runs, setRuns] = useState<RunRecord[] | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
+  const [lengths, setLengths] = useState<Record<string, number>>({});
   useEffect(() => { store.all().then(setRuns); }, []);
+  useEffect(() => { api.scenarios().then((list) => setLengths(Object.fromEntries(list.map((x) => [x.id, x.steps])))).catch(() => {}); }, []);
+  // Длина смены — из сценария: встроенный — по справочнику сервера, свой — из самого JSON.
+  const stepsOf = (r: RunRecord): number => "inline" in r.scenario
+    ? ((r.scenario.inline as { time?: { steps?: number } }).time?.steps ?? 288)
+    : lengths[r.scenario.ref] ?? 288;
 
   let demoId: string | null = null;
   try { demoId = localStorage.getItem("sz_demo_run_v2"); } catch { /* нет хранилища */ }
@@ -77,8 +84,8 @@ export default function MyRuns() {
                   <td>{GOAL[r.run_metadata.goal]}</td>
                   <td className="muted">{ALGO[r.run_metadata.algorithm]}</td>
                   <td className="mono">
-                    <div className="mini-bar"><i style={{ width: `${(r.steps_executed / 288) * 100}%` }} /></div>
-                    {r.steps_executed >= 288 ? "смена завершена" : `до ${clock(r.steps_executed)}`}
+                    <div className="mini-bar"><i style={{ width: `${(r.steps_executed / stepsOf(r)) * 100}%` }} /></div>
+                    {r.steps_executed >= stepsOf(r) ? "смена завершена" : `до ${clock(r.steps_executed)} из ${clock(stepsOf(r))}`}
                   </td>
                   <td className="mono">{r.events.length}{r.rejected_events.length ? <span className="muted"> · отклонено {r.rejected_events.length}</span> : null}</td>
                   <td onClick={(e) => e.stopPropagation()}>

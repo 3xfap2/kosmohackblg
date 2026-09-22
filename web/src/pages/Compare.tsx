@@ -10,7 +10,10 @@ import { ALGO, GOAL, usd } from "../format";
 const METRIC: Record<string, [string, (x: number) => string]> = {
   critical_jobs_completed_on_time: ["Срочные (P3) в срок", String],
   revenue_usd: ["Выручка", (x) => (x < 0 ? "−" : "") + usd(Math.abs(x))],
+  jobs_completed: ["Выполнено заданий", String],
   jobs_due_missed: ["Просрочено заданий", String],
+  mean_terminal_soc_pct: ["Средний заряд в конце", (x) => x.toFixed(1) + "%"],
+  min_terminal_soc_pct: ["Минимальный заряд в конце", (x) => x.toFixed(1) + "%"],
   minimum_soc_pct: ["Минимальный заряд", (x) => x.toFixed(1) + "%"],
   below_reserve_satellite_steps: ["Ниже резерва, ап.-шагов", String],
   work_steps_in_missed_jobs: ["Работа в сорванных заданиях, шагов", String],
@@ -73,9 +76,16 @@ export default function Compare() {
       {cmp && (
         <section className="card">
           <p className={"verdict " + cmp.verdict.preferred}>
-            {cmp.verdict.preferred === "comparable" ? "Результаты сопоставимы" : `Для цели «${GOAL[cmp.verdict.goal]}» предпочтительнее вариант ${cmp.verdict.preferred.toUpperCase()}`}
+            {cmp.verdict.preferred === "incomparable" ? "Несопоставимо: условия вариантов различаются"
+              : cmp.verdict.preferred === "comparable" ? "Результаты сопоставимы" : `Для цели «${GOAL[cmp.verdict.goal]}» предпочтительнее вариант ${cmp.verdict.preferred.toUpperCase()}`}
           </p>
           <p>{cmp.verdict.reason}</p>
+          {cmp.verdict.by_goal && cmp.verdict.preferred !== "incomparable" && (
+            <p className="small mono">{(["priority", "revenue"] as const).map((g) => {
+              const w = cmp.verdict.by_goal![g];
+              return `${GOAL[g]}: ${w === "comparable" ? "равно" : `лучше ${w.toUpperCase()}`}`;
+            }).join(" · ")}</p>
+          )}
           <p className="mono small muted">
             {cmp.same_origin ? `✓ общее исходное состояние (развилка на шаге ${cmp.fork_step})` : "варианты не из одного состояния — сравнение по итогам смены"}
             {" · "}{cmp.same_events_after_fork ? "✓ одинаковые сообщения после развилки" : "⚠ сообщения после развилки различаются"}

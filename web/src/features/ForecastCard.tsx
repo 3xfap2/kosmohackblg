@@ -6,12 +6,12 @@ import { clock } from "../format";
 // F4: прогноз на 2 часа — прогон текущего планировщика вперёд, не факт.
 const ICON = { energy: "⚡", p3: "◆", calibration: "◎" } as const;
 
-export default function ForecastCard({ run, data }: { run: RunRecord; data?: Forecast | null }) {
+export default function ForecastCard({ run, data, total }: { run: RunRecord; data?: Forecast | null; total?: number }) {
   const [own, setF] = useState<Forecast | null>(null);
   const f = data !== undefined ? data : own;
   const [error, setError] = useState<string | null>(null);
   const [all, setAll] = useState(false);
-  const done = run.steps_executed >= 288;
+  const done = run.steps_executed >= (total ?? 288);
 
   useEffect(() => {
     if (done || data !== undefined) return;

@@ -497,3 +497,14 @@ textarea.input { resize: vertical; font-size: 12.5px; }
 .auto-note { margin-top: 8px; }
 .auto-note b { color: var(--text-strong); }
 .auto-note ul { margin: 6px 0 0; padding-left: 18px; }
+.verdict.incomparable { color: var(--warn); }
+
+/* ---------- Температура и загрузка по аппаратам ---------- */
+.chart-sub { margin: 18px 0 6px; font-size: 14px; color: var(--text-strong); }
+.load-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 4px; }
+.load-cell { position: relative; height: 64px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+  padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: transparent; cursor: pointer; overflow: hidden; }
+.load-cell i { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(146,129,247,0.35); }
+.load-cell span { position: relative; font-size: 9px; color: var(--text-muted); }
+.load-cell b { position: relative; font-size: 11px; color: var(--text-strong); }
+.load-cell.on { border-color: var(--id); }

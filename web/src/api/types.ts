@@ -102,7 +102,8 @@ export interface Comparison {
   a: string; b: string; same_origin: boolean; fork_step: number | null;
   same_events_after_fork: boolean;
   metrics: { name: string; a: number | null; b: number | null; delta: number | null; better: "a" | "b" | "equal" }[];
-  verdict: { goal: Goal; preferred: "a" | "b" | "comparable"; reason: string };
+  verdict: { goal: Goal; preferred: "a" | "b" | "comparable" | "incomparable"; reason: string;
+    by_goal?: Record<Goal, "a" | "b" | "comparable" | "incomparable"> };
 }
 
 export type ScenarioSource =

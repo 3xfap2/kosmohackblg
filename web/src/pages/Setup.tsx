@@ -55,7 +55,8 @@ export default function Setup() {
     if (!source) return;
     setBusy(true); setError(null);
     try {
-      const res = await api.create(source, goal, algorithm);
+      const o = overrides();   // введённые условия не теряются, даже если «Применить» не нажали
+      const res = await api.create(o ? ({ ...source, overrides: o } as ScenarioSource) : source, goal, algorithm);
       await store.save(res.run);
       nav(`/console/run/${res.run.id}`);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }

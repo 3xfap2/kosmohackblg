@@ -42,6 +42,9 @@ export default function LiveRun() {
     try { return JSON.parse(localStorage.getItem(`sz_suggest_${id}`) ?? "[]"); } catch { return []; }
   }, [id]);
 
+  // Цель «Остановиться перед шагом» — не дальше конца смены (длина берётся из сценария, не 288).
+  useEffect(() => { if (view && target > view.steps_total) setTarget(view.steps_total); }, [view, target]);
+
   const refresh = useCallback(async (r: RunRecord, v?: RunView) => {
     const [vv, jj, tt] = await Promise.all([v ? Promise.resolve(v) : api.view(r), api.jobs(r), api.timeline(r)]);
     setView(vv); setJobs(jj); setTimeline(tt);
@@ -51,17 +54,19 @@ export default function LiveRun() {
     store.all().then(async (all) => {
       const r = all.find((x) => x.id === id);
       if (!r) { setError("Смена не найдена в этом браузере"); return; }
-      setRun(r); setTarget(Math.min(r.steps_executed + 12, 288));
+      setRun(r); setTarget(r.steps_executed + 12);   // уточняется по длине смены после загрузки вида
       try { await refresh(r); } catch (e) {
         if (!isStaleVersion(e)) { setError((e as Error).message); return; }
         // Смена рассчитана прежней версией алгоритма — пересчитываем автоматически с теми же входными данными.
         try {
           setRebuilding("Смена рассчитана прежней версией алгоритма — пересчитываем текущей…");
           const res = await rebuildRun(r, (step) => setRebuilding(`Пересчёт текущей версией алгоритма: шаг ${step} из ${r.steps_executed}`));
+          // Прежний расчёт не теряется: копия под своим id («Мои смены», можно выгрузить и повторить моделью).
+          await store.save({ ...r, id: `${r.id}-v${r.run_metadata.version}` });
           await store.save(res.run);
           setRun(res.run);
           await refresh(res.run, res.view);
-          setNotice(`Смена пересчитана текущей версией алгоритма (${res.run.run_metadata.version}): тот же сценарий, цель и сообщения на тех же шагах, до ${clock(r.steps_executed)}. Итог может отличаться от прежней версии.`);
+          setNotice(`Смена пересчитана текущей версией алгоритма (${res.run.run_metadata.version}): тот же сценарий, цель и сообщения на тех же шагах, до ${clock(r.steps_executed)}. Итог может отличаться от прежней версии; прежний расчёт сохранён копией в «Моих сменах».`);
         } catch (e2) { setError((e2 as Error).message); } finally { setRebuilding(null); }
       }
     });
@@ -88,14 +93,15 @@ export default function LiveRun() {
     const ctrl = new AbortController();
     abort.current = ctrl;
     let cur = run;
+    const n = view?.steps_total ?? 288;
     const key = (a: Alert) => `${a.kind}:${a.satellite_id ?? a.job_id ?? ""}`;
     try {
-      while (cur.steps_executed < 288 && !ctrl.signal.aborted) {
+      while (cur.steps_executed < n && !ctrl.signal.aborted) {
         const k0 = cur.steps_executed;
         const pending = stops.message
           ? suggestions.filter((e) => e.at_step >= k0 && !cur.events.some((x) => x.id === e.id)).map((e) => e.at_step) : [];
         const next = pending.length ? Math.min(...pending) : Infinity;
-        const target = Math.min(k0 + 12, 288, next);
+        const target = Math.min(k0 + 12, n, next);
         if (target === k0) {   // сообщение приходит прямо сейчас — решение за оператором
           const ev = suggestions.find((e) => e.at_step === k0 && !cur.events.some((x) => x.id === e.id));
           setAutoStop({ title: `Автопилот остановлен в ${clock(k0)}: приходит сообщение ${ev?.id ?? ""}`, items: ["Отправьте его на вкладке «Сообщение» — можно сначала оценить последствия."] });
@@ -111,7 +117,7 @@ export default function LiveRun() {
           setAutoStop({ title: `Автопилот остановлен в ${clock(next)}: приходит сообщение ${ev?.id ?? ""}`, items: ["Отправьте его на вкладке «Сообщение» — можно сначала оценить последствия."] });
           return;
         }
-        if (cur.steps_executed >= 288) break;
+        if (cur.steps_executed >= n) break;
         if (stops.energy || stops.p3) {
           setBusy(`Автопилот: прогноз с ${clock(cur.steps_executed)} на 2 часа…`);
           const f = await api.f.forecast(cur);
@@ -172,12 +178,12 @@ export default function LiveRun() {
   const board = useMemo(() => (timeline ? fromTimeline(timeline) : null), [timeline]);
   // Прогноз — один запрос на состояние смены: для колокольчика в шапке и карточки прогноза.
   useEffect(() => {
-    if (!run || run.steps_executed >= 288 || busy) return;
+    if (!run || !view || run.steps_executed >= view.steps_total || busy) return;
     let live = true;
     setForecast(null);
     const t = setTimeout(() => api.f.forecast(run).then((f) => live && setForecast(f)).catch(() => live && setForecast(null)), 300);
     return () => { live = false; clearTimeout(t); };
-  }, [run, busy]);
+  }, [run, view, busy]);
   const openEvents = useCallback(() => {
     setTab("event");
     document.querySelector(".control")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -273,7 +279,7 @@ export default function LiveRun() {
           usedIds={[...view.events.map((e) => e.id)]} onSend={sendEvent} />
       )}
     </section>
-    <ForecastCard run={run} data={forecast} />
+    <ForecastCard run={run} data={forecast} total={view.steps_total} />
   </>);
 
   return (
