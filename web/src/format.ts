@@ -26,6 +26,7 @@ export const LOSS: Record<string, string> = {
   energy_spent_elsewhere: "заряд потрачен на другие задания",
   calibration_timing: "калибровка не вовремя",
   started_not_finished: "начато, но не завершено",
+  disrupted_by_event: "сорвано сообщением после начала работы",
 };
 
 export const GROUP: Record<string, string> = {

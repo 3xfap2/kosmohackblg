@@ -32,11 +32,41 @@ def impossibility(s, job):
     return {"group": "problem_limit", "code": code, "proof": proof}
 
 
+def _disrupted_by_event(session, job, rows):
+    """Начатое задание сорвало сообщение, пришедшее после начала работы: после сообщения до срока
+    у допустимых исполнителей шагов связи (вне недоступности) меньше, чем оставалось работы. Проверяемо по данным."""
+    s = session.env.s
+    ids = set(job["eligible_satellites"])
+    def usable(sid, t):
+        return s["environment"][sid][job["kind"] + "_available"][t] and not any(
+            f["satellite_id"] == sid and f["start_step"] <= t < f["end_step"] for f in s["failures"])
+    for ev in sorted(session.events, key=lambda e: e["at_step"]):
+        at = ev["at_step"]
+        if ev.get("type") not in ("satellite_outage", "close_downlink") or not ids & set(ev.get("satellite_ids", [])):
+            continue
+        if not job["release_step"] <= at < job["deadline_step"]:
+            continue
+        worked = sum(r["executed"] == "job" and r["requested"].get("job_id") == job["id"] and r["step"] < at for r in rows)
+        if not worked:
+            continue
+        left = job["work_steps"] - worked
+        contact = sum(any(usable(sid, t) for sid in ids) for t in range(at, job["deadline_step"]))
+        if contact < left:
+            return {"group": "problem_limit", "code": "disrupted_by_event",
+                    "proof": f"Задание начато до сообщения {ev['id']} (шаг {at}); после него до срока {job['deadline_step']} "
+                             f"у допустимых исполнителей {contact} шагов связи, а оставалось {left} шагов работы."}
+    return None
+
+
 def loss_reason(session, job, rows):
+    done = job["work_steps"] - job["remaining_steps"]
+    # Начатое задание, сорванное сообщением, — точнее общей невыполнимости «задним числом».
+    disrupted = _disrupted_by_event(session, job, rows) if done else None
+    if disrupted:
+        return disrupted
     proof = impossibility(session.env.s, job)
     if proof:
         return proof
-    done = job["work_steps"] - job["remaining_steps"]
     if done:
         return {"group": "planner_choice", "code": "started_not_finished",
                 "evidence": f"В журнале выполнено {done} из {job['work_steps']} шагов, срок истёк. Это факт потери работы, не доказательство её первопричины."}

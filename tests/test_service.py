@@ -231,3 +231,21 @@ def test_invalid_record_returns_input_error(field, value):
     r[field] = value
     with pytest.raises(InputError):
         service.view(r)
+
+
+def test_started_job_disrupted_by_later_message_is_problem_limit():
+    """Начатое задание сорвало сообщение, пришедшее после начала: это ограничение задачи с цифрами, а не решение алгоритма."""
+    s = load("data/P01_intro.json")
+    job = dict(s["jobs"][0], id="DIS-1", kind="downlink", release_step=0, deadline_step=20, work_steps=4,
+               eligible_satellites=["S01"], priority=3, value_usd=500.0)
+    s["jobs"] = [job]
+    s["environment"]["S01"]["downlink_available"][:20] = [True] * 20
+    s["satellites"][0]["initial_calibration_age_steps"] = 0
+    run = service.advance(service.create_run({"inline": s}, "priority", "goal-greedy"), 2)
+    assert [c["step"] for c in run["commands"] if c.get("job_id") == "DIS-1"] == [0, 1]
+    run, err = service.apply_event(run, {"id": "OUT", "at_step": 2, "type": "satellite_outage", "satellite_ids": ["S01"], "end_step": 20})
+    assert err is None
+    run = service.advance(run, 20)
+    e = service.explain(run, job_id="DIS-1")
+    assert e["loss"]["group"] == "problem_limit" and e["loss"]["code"] == "disrupted_by_event"
+    assert "OUT" in e["consequence"]
