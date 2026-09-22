@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { Frontier, Link, RunRecord, Stress, WhatIf } from "../api/types";
-import { clock, usd } from "../format";
+import type { Algorithm, Frontier, Goal, Link, RunRecord, Stress, Tournament, WhatIf } from "../api/types";
+import { ALGO, GOAL, clock, usd } from "../format";
 
 // F5–F8: исследования смены. Каждое число — полный прогон модели организаторов.
-type Tab = "whatif" | "frontier" | "stress" | "link";
+type Tab = "tournament" | "whatif" | "frontier" | "stress" | "link";
 const TABS: [Tab, string, string][] = [
+  ["tournament", "Турнир стратегий", "Из этого момента до конца смены: простое правило и эвристика с обеими целями, одинаковые условия. Какая стратегия лучше для каждой цели."],
   ["whatif", "Что если добавить ресурс", "Какой ресурс даст больше: +10% солнца, ещё канал на Землю или ёмкие батареи."],
   ["frontier", "Приоритет ↔ выручка", "Сколько выручки стоит каждое спасённое срочное задание."],
   ["stress", "Устойчивость", "12 случайных наборов отказов: наш планировщик против простого правила."],
@@ -13,16 +14,16 @@ const TABS: [Tab, string, string][] = [
 ];
 const sign = (x: number, f: (v: number) => string = String) => (x > 0 ? "+" : x < 0 ? "−" : "±") + f(Math.abs(x));
 
-export default function Research({ run }: { run: RunRecord }) {
-  const [tab, setTab] = useState<Tab>("whatif");
+export default function Research({ run, onFork }: { run: RunRecord; onFork?: (goal: Goal, algorithm: Algorithm) => void }) {
+  const [tab, setTab] = useState<Tab>("tournament");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<{ whatif?: WhatIf; frontier?: Frontier; stress?: Stress; link?: Link }>({});
+  const [data, setData] = useState<{ tournament?: Tournament; whatif?: WhatIf; frontier?: Frontier; stress?: Stress; link?: Link }>({});
 
   const go = async () => {
     setBusy(true); setError(null);
     try {
-      const r = tab === "whatif" ? await api.f.whatIf(run) : tab === "frontier" ? await api.f.frontier(run)
+      const r = tab === "tournament" ? await api.f.tournament(run) : tab === "whatif" ? await api.f.whatIf(run) : tab === "frontier" ? await api.f.frontier(run)
         : tab === "stress" ? await api.f.stress(run) : await api.f.link(run);
       setData((d) => ({ ...d, [tab]: r }));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -43,11 +44,45 @@ export default function Research({ run }: { run: RunRecord }) {
       </div>
       {error && <p className="error">{error}</p>}
       {busy && <div className="skeleton" />}
+      {!busy && tab === "tournament" && data.tournament && <TournamentView r={data.tournament} onFork={onFork} />}
       {!busy && tab === "whatif" && data.whatif && <WhatIfView r={data.whatif} />}
       {!busy && tab === "frontier" && data.frontier && <FrontierView r={data.frontier} />}
       {!busy && tab === "stress" && data.stress && <StressView r={data.stress} />}
       {!busy && tab === "link" && data.link && <LinkView r={data.link} />}
     </section>
+  );
+}
+
+function TournamentView({ r, onFork }: { r: Tournament; onFork?: (goal: Goal, algorithm: Algorithm) => void }) {
+  const isBest = (g: Goal, row: Tournament["rows"][number]) => r.best[g].algorithm === row.algorithm && r.best[g].goal === row.goal;
+  const name = (x: { algorithm: Algorithm; goal: Goal }) => `${ALGO[x.algorithm]} · ${GOAL[x.goal].toLowerCase()}`;
+  const bp = r.rows.find((x) => isBest("priority", x))!, br = r.rows.find((x) => isBest("revenue", x))!;
+  return (
+    <>
+      <p className="finding">Для приоритетного обслуживания лучше «{name(bp)}» — {bp.p3_done} из {bp.p3_due} срочных;
+        для коммерческой отдачи — «{name(br)}» — {usd(br.revenue_usd)}.</p>
+      <div className="table-scroll">
+        <table className="table res-table">
+          <thead><tr><th>Стратегия</th><th>Срочные в срок</th><th>Выполнено</th><th>Выручка</th><th>Ниже резерва, ап.-шагов</th><th>Заряд в конце</th><th /></tr></thead>
+          <tbody>
+            {r.rows.map((row) => (
+              <tr key={row.algorithm + row.goal} className={row.current ? "picked" : ""}>
+                <td>{ALGO[row.algorithm]}<div className="muted tiny">{GOAL[row.goal]}{row.current ? " · текущая" : ""}</div>
+                  {isBest("priority", row) && <span className="pill ok">лучшая по срочным</span>}
+                  {isBest("revenue", row) && <span className="pill ok">лучшая по выручке</span>}</td>
+                <td className="mono">{row.p3_done} / {row.p3_due}</td>
+                <td className="mono">{row.jobs_done} / {row.jobs_due}</td>
+                <td className="mono">{usd(row.revenue_usd)}</td>
+                <td className="mono">{row.below_reserve_steps}</td>
+                <td className="mono">{row.mean_terminal_soc_pct.toFixed(1)}%</td>
+                <td>{onFork && !row.current && <button className="btn btn-sm" onClick={() => onFork(row.goal, row.algorithm)}>Ветвь</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted tiny">{clock(r.from_step)}–{clock(r.until_step)} · {r.note} CP-SAT здесь не участвует: его ветвь — «Ветвь с другим алгоритмом».</p>
+    </>
   );
 }
 

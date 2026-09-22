@@ -62,3 +62,15 @@ def test_impact_shows_plan_changes_for_outage(run):
         assert c["before"] != c["after"] and 24 <= c["step"] < 48
         if c["satellite_id"] in ("S01", "S02") and c["step"] < 40:
             assert c["after"] == "idle"     # недоступный спутник в перестроенном плане ждёт
+
+
+def test_tournament_same_state_all_strategies(run):
+    """F12: четыре стратегии из одного состояния до конца смены; запись не меняется; лучшие выбраны по цели."""
+    before = copy.deepcopy(run)
+    t = F.tournament(run)
+    assert run == before and t["from_step"] == 24 and len(t["rows"]) == 4
+    assert {(r["algorithm"], r["goal"]) for r in t["rows"]} == set(F.TOURNAMENT)
+    assert sum(r["current"] for r in t["rows"]) == 1
+    best = max(t["rows"], key=lambda r: (r["p3_done"], r["revenue_usd"]))
+    assert (best["algorithm"], best["goal"]) == (t["best"]["priority"]["algorithm"], t["best"]["priority"]["goal"])
+    assert all(r["blocked_commands"] == 0 for r in t["rows"])

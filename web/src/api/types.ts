@@ -163,6 +163,13 @@ export interface Stress {
   ours: Record<"p3_done" | "revenue_usd", { min: number; median: number; max: number }>;
   baseline: Record<"p3_done" | "revenue_usd", { min: number; median: number; max: number }>; note: string;
 }
+export interface TournamentRow extends BranchScore {
+  algorithm: Algorithm; goal: Goal; mean_terminal_soc_pct: number; current: boolean;
+}
+export interface Tournament {
+  from_step: number; until_step: number; rows: TournamentRow[];
+  best: Record<Goal, { algorithm: Algorithm; goal: Goal }>; note: string;
+}
 export interface Link { steps: number; executed: number; contact_share: number; used_share_executed: number | null;
   dark_windows: { start: number; end: number; steps: number; future: boolean }[]; longest_dark_steps: number; note: string }
 export interface Passport { satellite_id: string; capacity_wh: number; soc_now_pct: number; soc_min_pct: number | null; soc_depth_pct: number | null;

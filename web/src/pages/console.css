@@ -489,3 +489,11 @@ textarea.input { resize: vertical; font-size: 12.5px; }
 .diff-rows { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
 .diff-rows > div { display: grid; grid-template-columns: 44px 48px 1fr 14px 1fr; gap: 6px; align-items: center; }
 .rebuild-note { margin: 16px 0 0; display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+
+/* ---------- Автопилот ---------- */
+.auto-stops { gap: 14px; font-size: 13px; color: var(--text-muted); }
+.auto-stops label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.auto-stops input { accent-color: var(--id); }
+.auto-note { margin-top: 8px; }
+.auto-note b { color: var(--text-strong); }
+.auto-note ul { margin: 6px 0 0; padding-left: 18px; }

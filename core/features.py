@@ -138,6 +138,34 @@ def event_impact(record, event, horizon=48):
     }
 
 
+# ---------------------------------------------------------------- F12. Турнир стратегий
+TOURNAMENT = (("edf-baseline", "priority"), ("edf-baseline", "revenue"), ("goal-greedy", "priority"), ("goal-greedy", "revenue"))
+
+
+def tournament(record):
+    """Из текущего состояния до конца смены: простое правило и эвристика × две цели, одни и те же условия.
+    CP-SAT не участвует — полный день с ним идёт минуты; его ветвь создаётся отдельно («Ветвь с другим алгоритмом»)."""
+    session, planner = _restore(record)
+    k, n = session.env.k, session.env.s["time"]["steps"]
+    if k >= n:
+        raise InputError("Смена завершена — сравнивать продолжения не из чего")
+    rows = []
+    for algorithm, goal in TOURNAMENT:
+        branch = _clone(session)
+        _run(branch, make_planner(algorithm, goal), n)
+        caps = {sid: v["capacity_wh"] for sid, v in branch.env.sats.items()}
+        rows.append({"algorithm": algorithm, "goal": goal, **_score(branch, k, n),
+                     "mean_terminal_soc_pct": round(sum(100 * st["energy_wh"] / caps[sid] for sid, st in branch.env.state.items()) / len(caps), 1),
+                     "current": algorithm == planner.name and goal == planner.goal})
+    best_priority = max(rows, key=lambda r: (r["p3_done"], r["revenue_usd"]))
+    best_revenue = max(rows, key=lambda r: r["revenue_usd"])
+    return {"from_step": k, "until_step": n, "rows": rows,
+            "best": {"priority": {"algorithm": best_priority["algorithm"], "goal": best_priority["goal"]},
+                     "revenue": {"algorithm": best_revenue["algorithm"], "goal": best_revenue["goal"]}},
+            "note": "Все ветви исполнены моделью организаторов из одного состояния до конца смены; будущие сообщения неизвестны. "
+                    "Счёт — по заданиям со сроком после текущего момента."}
+
+
 # ---------------------------------------------------------------- F4. Прогноз дефицита
 def forecast(record, horizon=24):
     """Прогон текущего планировщика вперёд: кто уйдёт ниже резерва, какие задания P3 не успевают."""

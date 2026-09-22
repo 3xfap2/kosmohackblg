@@ -258,6 +258,11 @@ def f_stress(body: Stress):
     return call(features.stress_test, body.run, body.runs)
 
 
+@app.post("/api/features/tournament")
+def f_tournament(body: RunOnly):
+    return call(features.tournament, body.run)
+
+
 @app.post("/api/features/link")
 def f_link(body: RunOnly):
     return call(features.link_continuity, body.run)

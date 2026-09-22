@@ -1,7 +1,7 @@
 import type {
   Algorithm, Comparison, Explanation, Goal, JobView, RunRecord, RunResponse, RunView,
   ScenarioInfo, ScenarioSource, StepRow, Timeline,
-  Forecast, Frontier, Impact, Link, Passport, Report, Stress, WhatIf, WhyNot,
+  Forecast, Frontier, Impact, Link, Passport, Report, Stress, Tournament, WhatIf, WhyNot,
 } from "./types";
 
 // Тот же домен: на Vercel /api — Python-функция, локально — прокси Vite.
@@ -56,6 +56,7 @@ export const api = {
     frontier: (run: RunRecord) => req<Frontier>("/api/features/frontier", { run }),
     stress: (run: RunRecord, runs = 12) => req<Stress>("/api/features/stress", { run, runs }),
     link: (run: RunRecord) => req<Link>("/api/features/link", { run }),
+    tournament: (run: RunRecord) => req<Tournament>("/api/features/tournament", { run }),
     passport: (run: RunRecord, satellite_id: string) => req<Passport>("/api/features/passport", { run, satellite_id }),
     report: (run: RunRecord) => req<Report>("/api/features/report", { run }),
   },

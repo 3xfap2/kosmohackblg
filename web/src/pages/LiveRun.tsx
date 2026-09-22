@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { advanceUntil, api, isStaleVersion, rebuildRun } from "../api/client";
 import { store } from "../api/store";
-import type { Algorithm, EventRecord, Forecast, Goal, Impact, JobView, RunRecord, RunView, Timeline } from "../api/types";
+import type { Alert, Algorithm, EventRecord, Forecast, Goal, Impact, JobView, RunRecord, RunView, Timeline } from "../api/types";
 import ImpactCard from "../features/ImpactCard";
 import ChatWidget from "../components/ChatWidget";
 import ForecastCard from "../features/ForecastCard";
@@ -34,6 +34,10 @@ export default function LiveRun() {
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [intervention, setIntervention] = useState<{ event: Record<string, unknown>; impact?: Impact; error?: string; sent?: string | null } | null>(null);
   const abort = useRef<AbortController | null>(null);
+  // F13: автопилот — смена идёт сама и останавливается, только когда нужно решение оператора.
+  const [stops, setStops] = useState({ message: true, energy: true, p3: true });
+  const [autoStop, setAutoStop] = useState<{ title: string; items: string[] } | null>(null);
+  const seenAlerts = useRef(new Set<string>());
   const suggestions = useMemo<EventRecord[]>(() => {
     try { return JSON.parse(localStorage.getItem(`sz_suggest_${id}`) ?? "[]"); } catch { return []; }
   }, [id]);
@@ -75,6 +79,55 @@ export default function LiveRun() {
         setRun(p.run); setView(p.view); store.save(p.run);
       }, abort.current.signal);
       await save(res.run, res.view);
+    } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+  };
+
+  const autopilot = async () => {
+    if (!run) return;
+    setError(null); setAutoStop(null);
+    const ctrl = new AbortController();
+    abort.current = ctrl;
+    let cur = run;
+    const key = (a: Alert) => `${a.kind}:${a.satellite_id ?? a.job_id ?? ""}`;
+    try {
+      while (cur.steps_executed < 288 && !ctrl.signal.aborted) {
+        const k0 = cur.steps_executed;
+        const pending = stops.message
+          ? suggestions.filter((e) => e.at_step >= k0 && !cur.events.some((x) => x.id === e.id)).map((e) => e.at_step) : [];
+        const next = pending.length ? Math.min(...pending) : Infinity;
+        const target = Math.min(k0 + 12, 288, next);
+        if (target === k0) {   // сообщение приходит прямо сейчас — решение за оператором
+          const ev = suggestions.find((e) => e.at_step === k0 && !cur.events.some((x) => x.id === e.id));
+          setAutoStop({ title: `Автопилот остановлен в ${clock(k0)}: приходит сообщение ${ev?.id ?? ""}`, items: ["Отправьте его на вкладке «Сообщение» — можно сначала оценить последствия."] });
+          return;
+        }
+        setBusy(`Автопилот: ${clock(k0)} → ${clock(target)}`);
+        const res = await advanceUntil(cur, target, (x) => { setRun(x.run); setView(x.view); }, ctrl.signal);
+        cur = res.run;
+        await save(res.run, res.view);
+        if (ctrl.signal.aborted) { setAutoStop({ title: `Автопилот остановлен оператором в ${clock(cur.steps_executed)}`, items: [] }); return; }
+        if (cur.steps_executed === next) {
+          const ev = suggestions.find((e) => e.at_step === next);
+          setAutoStop({ title: `Автопилот остановлен в ${clock(next)}: приходит сообщение ${ev?.id ?? ""}`, items: ["Отправьте его на вкладке «Сообщение» — можно сначала оценить последствия."] });
+          return;
+        }
+        if (cur.steps_executed >= 288) break;
+        if (stops.energy || stops.p3) {
+          setBusy(`Автопилот: прогноз с ${clock(cur.steps_executed)} на 2 часа…`);
+          const f = await api.f.forecast(cur);
+          const risks = f.alerts.filter((a) => (stops.energy && a.kind === "energy" && a.severity !== "low")
+            || (stops.p3 && a.kind === "p3" && !a.text.includes("невыполнимо")));
+          const fresh = risks.filter((a) => !seenAlerts.current.has(key(a)));
+          risks.forEach((a) => seenAlerts.current.add(key(a)));
+          if (fresh.length) {
+            setForecast(f);
+            setAutoStop({ title: `Автопилот остановлен в ${clock(cur.steps_executed)}: прогноз видит новый риск (${fresh.length})`,
+              items: fresh.slice(0, 4).map((a) => a.text).concat(fresh.length > 4 ? [`и ещё ${fresh.length - 4}`] : []) });
+            return;
+          }
+        }
+      }
+      setAutoStop({ title: "Автопилот довёл смену до конца без новых рисков", items: [] });
     } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
   };
 
@@ -181,6 +234,20 @@ export default function LiveRun() {
             <input className="input mono" type="number" min={k + 1} max={total} value={target} onChange={(e) => setTarget(+e.target.value)} />
             <button className="btn" disabled={!!busy || done || target <= k} onClick={() => go(target)}>Остановиться перед шагом {target} ({clock(target)})</button>
           </div>
+          <h4>Автопилот</h4>
+          <p className="muted small">Смена идёт сама по часу; после каждого часа — прогноз на 2 часа. Остановка, только если появился новый повод вмешаться:</p>
+          <div className="row auto-stops">
+            {suggestions.length > 0 && <label><input type="checkbox" checked={stops.message} onChange={(e) => setStops({ ...stops, message: e.target.checked })} /> сообщение</label>}
+            <label><input type="checkbox" checked={stops.energy} onChange={(e) => setStops({ ...stops, energy: e.target.checked })} /> риск заряда</label>
+            <label><input type="checkbox" checked={stops.p3} onChange={(e) => setStops({ ...stops, p3: e.target.checked })} /> срочное под угрозой</label>
+          </div>
+          <div className="row"><button className="btn btn-primary" disabled={!!busy || done} onClick={autopilot}>{autoStop && !done ? "Продолжить автопилот" : "Запустить автопилот"}</button></div>
+          {autoStop && (
+            <div className="note auto-note">
+              <b>{autoStop.title}</b>
+              {autoStop.items.length > 0 && <ul>{autoStop.items.map((t) => <li key={t}>{t}</li>)}</ul>}
+            </div>
+          )}
           {busy && <p className="mono small warn-text">{busy} {abort.current && <button className="btn" onClick={() => abort.current?.abort()}>Стоп</button>}</p>}
           {error && <p className="error">{error}</p>}
           <h4>Цель управления</h4>
@@ -216,7 +283,7 @@ export default function LiveRun() {
         onAdvance={go} onSeek={(step) => setSeek({ step, n: Date.now() })} onGoal={changeGoal} onFork={fork}
         onEvents={openEvents} onForecast={() => document.getElementById("forecast")?.scrollIntoView({ behavior: "smooth", block: "center" })} />
       <RunDashboard view={view} jobs={jobs} board={board} explain={explain} side={side}
-        after={k > 0 ? <Research run={run} /> : undefined}
+        after={k > 0 ? <Research run={run} onFork={(g, a) => fork(g, a)} /> : undefined}
         whyNot={whyNot} passport={passport} shareUrl={shareUrl} seek={seek}
         onIntervene={done ? undefined : intervene} interveneStep={done ? undefined : k} />
       {intervention && (
