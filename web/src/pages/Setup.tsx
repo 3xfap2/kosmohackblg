@@ -1,3 +1,4 @@
+import { markJury } from "../jury";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -57,6 +58,7 @@ export default function Setup() {
     try {
       const res = await api.create(source, goal, algorithm);
       await store.save(res.run);
+      markJury("scenario");
       nav(`/console/run/${res.run.id}`);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
