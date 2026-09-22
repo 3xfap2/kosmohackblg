@@ -161,8 +161,8 @@ def _restore(record):
             raise ValueError("Неверная схема записи запуска")
         # id и run_metadata.parent — метки браузера, в подпись не входят (сравнение проверяет повтор
         # префикса, а не метки), поэтому формат проверяем отдельно: id попадает в имя файла выгрузки.
-        if not isinstance(record["id"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", record["id"]):
-            raise ValueError("Некорректный идентификатор запуска: допустимы латиница, цифры, «-» и «_», до 64 знаков")
+        if not isinstance(record["id"], str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", record["id"]):
+            raise ValueError("Некорректный идентификатор запуска: допустимы латиница, цифры, «.», «-» и «_», до 64 знаков")
         if not hmac.compare_digest(str(record.get("signature", "")), _signature(record)):
             raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или подписана другим ключом сервера — смена будет пересчитана")
         s = _source(record["scenario"])

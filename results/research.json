@@ -20,7 +20,7 @@
         "cpsat_selected": 5,
         "solves": 48,
         "command_hash": "3d8451656b5327e2d28add32b32dbf08d1001868071fc1ab9f0b897fb44f1818",
-        "seconds": 44.3,
+        "seconds": 49.7,
         "parameters": {
           "horizon": 24,
           "replan_every": 6,
@@ -37,7 +37,7 @@
         "cpsat_selected": 5,
         "solves": 48,
         "command_hash": "28ed9474a2073d0d6ef1b55a9c068bcc02d3c301794bdb43aa38c8de9ce241f6",
-        "seconds": 48.6,
+        "seconds": 52.5,
         "parameters": {
           "horizon": 36,
           "replan_every": 6,
@@ -54,7 +54,7 @@
         "cpsat_selected": 6,
         "solves": 48,
         "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
-        "seconds": 58.2,
+        "seconds": 63.0,
         "parameters": {
           "horizon": 48,
           "replan_every": 6,
@@ -71,7 +71,7 @@
         "cpsat_selected": 6,
         "solves": 48,
         "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
-        "seconds": 75.3,
+        "seconds": 81.9,
         "parameters": {
           "horizon": 72,
           "replan_every": 6,
@@ -88,7 +88,7 @@
         "cpsat_selected": 13,
         "solves": 96,
         "command_hash": "5a24e0cc36d21b278a05e9920c007850bbf13540ef2986265a2b318c5ee85cee",
-        "seconds": 114.1,
+        "seconds": 124.0,
         "parameters": {
           "horizon": 48,
           "replan_every": 3,
@@ -105,7 +105,7 @@
         "cpsat_selected": 6,
         "solves": 48,
         "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
-        "seconds": 58.2,
+        "seconds": 63.0,
         "parameters": {
           "horizon": 48,
           "replan_every": 6,
@@ -122,7 +122,7 @@
         "cpsat_selected": 3,
         "solves": 24,
         "command_hash": "d18b1f0c6135055b42cb74b77ca97a62efbfc2e4f8f19fc42109f5c3d0b43cfc",
-        "seconds": 29.0,
+        "seconds": 31.6,
         "parameters": {
           "horizon": 48,
           "replan_every": 12,
@@ -139,7 +139,7 @@
         "cpsat_selected": 16,
         "solves": 48,
         "command_hash": "3602fef894e358121dfb69a4973004c05054aa41f0bd8b9e4b23fd5c4f3a27a1",
-        "seconds": 53.5,
+        "seconds": 57.8,
         "parameters": {
           "horizon": 48,
           "replan_every": 6,
@@ -156,7 +156,7 @@
         "cpsat_selected": 7,
         "solves": 48,
         "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
-        "seconds": 60.8,
+        "seconds": 63.8,
         "parameters": {
           "horizon": 48,
           "replan_every": 6,
@@ -173,7 +173,7 @@
         "cpsat_selected": 6,
         "solves": 48,
         "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
-        "seconds": 58.2,
+        "seconds": 63.0,
         "parameters": {
           "horizon": 48,
           "replan_every": 6,
@@ -190,7 +190,7 @@
         "cpsat_selected": 6,
         "solves": 48,
         "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
-        "seconds": 59.4,
+        "seconds": 60.9,
         "parameters": {
           "horizon": 48,
           "replan_every": 6,
@@ -376,6 +376,182 @@
         }
       ]
     },
+    "P02_shift__seed21": {
+      "seed": 21,
+      "runs": 12,
+      "goal": "priority",
+      "wins": 12,
+      "ours": {
+        "p3_done": {
+          "min": 308,
+          "median": 312.0,
+          "max": 315
+        },
+        "revenue_usd": {
+          "min": 26987.37,
+          "median": 27088.155,
+          "max": 27138.96
+        }
+      },
+      "baseline": {
+        "p3_done": {
+          "min": 299,
+          "median": 303.5,
+          "max": 306
+        },
+        "revenue_usd": {
+          "min": 26802.44,
+          "median": 26908.225,
+          "max": 26959.03
+        }
+      },
+      "rows": [
+        {
+          "run": 0,
+          "events": 2,
+          "ours": {
+            "p3_done": 312,
+            "revenue_usd": 27095.65
+          },
+          "baseline": {
+            "p3_done": 303,
+            "revenue_usd": 26915.72
+          }
+        },
+        {
+          "run": 1,
+          "events": 2,
+          "ours": {
+            "p3_done": 314,
+            "revenue_usd": 27118.97
+          },
+          "baseline": {
+            "p3_done": 305,
+            "revenue_usd": 26939.04
+          }
+        },
+        {
+          "run": 2,
+          "events": 3,
+          "ours": {
+            "p3_done": 313,
+            "revenue_usd": 27102.31
+          },
+          "baseline": {
+            "p3_done": 304,
+            "revenue_usd": 26922.38
+          }
+        },
+        {
+          "run": 3,
+          "events": 4,
+          "ours": {
+            "p3_done": 308,
+            "revenue_usd": 26995.7
+          },
+          "baseline": {
+            "p3_done": 299,
+            "revenue_usd": 26815.77
+          }
+        },
+        {
+          "run": 4,
+          "events": 3,
+          "ours": {
+            "p3_done": 315,
+            "revenue_usd": 27138.96
+          },
+          "baseline": {
+            "p3_done": 306,
+            "revenue_usd": 26959.03
+          }
+        },
+        {
+          "run": 5,
+          "events": 2,
+          "ours": {
+            "p3_done": 313,
+            "revenue_usd": 27080.66
+          },
+          "baseline": {
+            "p3_done": 304,
+            "revenue_usd": 26900.73
+          }
+        },
+        {
+          "run": 6,
+          "events": 4,
+          "ours": {
+            "p3_done": 311,
+            "revenue_usd": 27034.01
+          },
+          "baseline": {
+            "p3_done": 302,
+            "revenue_usd": 26854.08
+          }
+        },
+        {
+          "run": 7,
+          "events": 4,
+          "ours": {
+            "p3_done": 309,
+            "revenue_usd": 26987.37
+          },
+          "baseline": {
+            "p3_done": 300,
+            "revenue_usd": 26802.44
+          }
+        },
+        {
+          "run": 8,
+          "events": 2,
+          "ours": {
+            "p3_done": 314,
+            "revenue_usd": 27123.97
+          },
+          "baseline": {
+            "p3_done": 306,
+            "revenue_usd": 26949.04
+          }
+        },
+        {
+          "run": 9,
+          "events": 4,
+          "ours": {
+            "p3_done": 310,
+            "revenue_usd": 27049.0
+          },
+          "baseline": {
+            "p3_done": 299,
+            "revenue_usd": 26824.08
+          }
+        },
+        {
+          "run": 10,
+          "events": 4,
+          "ours": {
+            "p3_done": 310,
+            "revenue_usd": 27022.35
+          },
+          "baseline": {
+            "p3_done": 302,
+            "revenue_usd": 26834.09
+          }
+        },
+        {
+          "run": 11,
+          "events": 2,
+          "ours": {
+            "p3_done": 312,
+            "revenue_usd": 27115.63
+          },
+          "baseline": {
+            "p3_done": 304,
+            "revenue_usd": 26940.7
+          }
+        }
+      ]
+    },
     "P04_demand": {
       "seed": 7,
       "runs": 12,
@@ -548,6 +724,182 @@
           "baseline": {
             "p3_done": 1223,
             "revenue_usd": 121486.97
+          }
+        }
+      ]
+    },
+    "P04_demand__seed21": {
+      "seed": 21,
+      "runs": 12,
+      "goal": "priority",
+      "wins": 12,
+      "ours": {
+        "p3_done": {
+          "min": 1640,
+          "median": 1646.0,
+          "max": 1650
+        },
+        "revenue_usd": {
+          "min": 151583.81,
+          "median": 152852.5,
+          "max": 153408.06
+        }
+      },
+      "baseline": {
+        "p3_done": {
+          "min": 1214,
+          "median": 1228.0,
+          "max": 1231
+        },
+        "revenue_usd": {
+          "min": 120800.54,
+          "median": 121830.12,
+          "max": 123199.63
+        }
+      },
+      "rows": [
+        {
+          "run": 0,
+          "events": 2,
+          "ours": {
+            "p3_done": 1645,
+            "revenue_usd": 152621.73
+          },
+          "baseline": {
+            "p3_done": 1220,
+            "revenue_usd": 121187.1
+          }
+        },
+        {
+          "run": 1,
+          "events": 2,
+          "ours": {
+            "p3_done": 1648,
+            "revenue_usd": 153041.57
+          },
+          "baseline": {
+            "p3_done": 1230,
+            "revenue_usd": 122291.62
+          }
+        },
+        {
+          "run": 2,
+          "events": 3,
+          "ours": {
+            "p3_done": 1646,
+            "revenue_usd": 152388.49
+          },
+          "baseline": {
+            "p3_done": 1228,
+            "revenue_usd": 121791.81
+          }
+        },
+        {
+          "run": 3,
+          "events": 4,
+          "ours": {
+            "p3_done": 1640,
+            "revenue_usd": 153066.52
+          },
+          "baseline": {
+            "p3_done": 1228,
+            "revenue_usd": 121865.1
+          }
+        },
+        {
+          "run": 4,
+          "events": 3,
+          "ours": {
+            "p3_done": 1650,
+            "revenue_usd": 153173.14
+          },
+          "baseline": {
+            "p3_done": 1229,
+            "revenue_usd": 122608.19
+          }
+        },
+        {
+          "run": 5,
+          "events": 2,
+          "ours": {
+            "p3_done": 1648,
+            "revenue_usd": 153408.06
+          },
+          "baseline": {
+            "p3_done": 1230,
+            "revenue_usd": 122524.89
+          }
+        },
+        {
+          "run": 6,
+          "events": 4,
+          "ours": {
+            "p3_done": 1646,
+            "revenue_usd": 152966.62
+          },
+          "baseline": {
+            "p3_done": 1229,
+            "revenue_usd": 122639.84
+          }
+        },
+        {
+          "run": 7,
+          "events": 4,
+          "ours": {
+            "p3_done": 1644,
+            "revenue_usd": 152738.38
+          },
+          "baseline": {
+            "p3_done": 1223,
+            "revenue_usd": 121710.17
+          }
+        },
+        {
+          "run": 8,
+          "events": 2,
+          "ours": {
+            "p3_done": 1648,
+            "revenue_usd": 152670.01
+          },
+          "baseline": {
+            "p3_done": 1222,
+            "revenue_usd": 121795.14
+          }
+        },
+        {
+          "run": 9,
+          "events": 4,
+          "ours": {
+            "p3_done": 1646,
+            "revenue_usd": 153354.77
+          },
+          "baseline": {
+            "p3_done": 1231,
+            "revenue_usd": 123199.63
+          }
+        },
+        {
+          "run": 10,
+          "events": 4,
+          "ours": {
+            "p3_done": 1644,
+            "revenue_usd": 151583.81
+          },
+          "baseline": {
+            "p3_done": 1214,
+            "revenue_usd": 120800.54
+          }
+        },
+        {
+          "run": 11,
+          "events": 2,
+          "ours": {
+            "p3_done": 1644,
+            "revenue_usd": 152360.16
+          },
+          "baseline": {
+            "p3_done": 1215,
+            "revenue_usd": 121620.22
           }
         }
       ]

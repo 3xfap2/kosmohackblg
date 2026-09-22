@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "source": "results/*.json",
+  "claims": [
+    {
+      "file": "README.md",
+      "claim": "| P02 обычная смена | 306 / 334 | 315 / 334 | 315 / 334 |",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "| P03 дефицит энергии | 299 / 334 | 314 / 334 | 314 / 334 |",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "| P04 перегрузка | 1232 / 1692 | 1649 / 1692 | 1649 / 1692 |",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "P02 $26 916 → $27 352, P03 $26 657 → $27 384, P04 $130 588 → $185 293",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "P02 $27 352 против $27 151",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "+$31 423 выручки за −391 срочных",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "+$31 423 выручки за −391 срочных",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "срочные 307 → 310, просрочено 81 → 72",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "срочные 307 → 310, просрочено 81 → 72",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "заявки из сообщений 0 → 3 из 4",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "P04: 1232 → 1649 срочных в срок, 5446 → 5947 выполнено, работа в сорванных 2772 → 830",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "ниже резерва 554 → 15",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "293 против 491",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "293 против 491",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "CP-SAT принят в 6, 5 и 1 из 48 перестроек (приоритет) и в 7, 2 и 0 (коммерция)",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "вклад принятых планов по оценке окна — $37 на P02, $48 на P03 и $135 на P04 (приоритет)",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "вклад принятых планов по оценке окна — $37 на P02, $48 на P03 и $135 на P04 (приоритет)",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "32 из 32 прогонов повторены моделью организаторов",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "32 из 32 прогонов повторены моделью с тем же итогом",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "Простое правило с теми же сообщениями: срочные 302, просрочено 79",
+      "found": true
+    },
+    {
+      "file": "CRITERIA.md",
+      "claim": "82,9 % → 96,2 %",
+      "found": true
+    },
+    {
+      "file": "README.md",
+      "claim": "82,9 % → 96,2 %",
+      "found": true
+    }
+  ]
+}

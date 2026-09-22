@@ -5,6 +5,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "ddb067bbbe941ea52a45378a0ebaf8055cfe39da644db14b78f1d23522f0bab6",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -57,6 +64,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "e5478088f9e608aba4573b1cfa26410e84bd640a03839b05297071cdc3d6346e",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -109,6 +123,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "0e1579b7ff1d176ec7b7405fa0d6519a206b8b2483ffb962a643215ab65de9b3",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -167,6 +188,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "0ba58383efbb259cdc5d9da29038ee95396340d8c5448717da93d57459ec3796",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -225,6 +253,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 8,
       "command_hash": "6831aa519483fc7c2f151ce0624795278871d7767b4131178382ed0251732e9d",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 8
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -287,6 +322,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 8,
       "command_hash": "6831aa519483fc7c2f151ce0624795278871d7767b4131178382ed0251732e9d",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 8
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -349,6 +391,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 43,
       "command_hash": "3073694e5ce9e9019dd1e6fcd4392f8fdf381b2962db789a5d95246cd501d533",
+      "cpsat_gain": {
+        "accepted": 7,
+        "max_window_revenue_usd": 15.0,
+        "p3": 0,
+        "revenue_usd": 41.68,
+        "windows": 50
+      },
       "cpsat_selected_solves": 7,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -449,6 +498,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 43,
       "command_hash": "3f0e1c37a5d0a5058bcef855a8eed886074fe11f733be22d107b7b9eb546120a",
+      "cpsat_gain": {
+        "accepted": 7,
+        "max_window_revenue_usd": 26.66,
+        "p3": 0,
+        "revenue_usd": 101.65,
+        "windows": 50
+      },
       "cpsat_selected_solves": 7,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -549,6 +605,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "2146919d64bca805844bf7dc50c3df12822ee5000017df7ca09187873034fe10",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -640,6 +703,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "591bb4200cdc6643fb0e627f23f10449cd5a0f22e3f9d06ccf0e787541f5f558",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -731,6 +801,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 0,
       "command_hash": "0ec04befc3dfbcbd54d30fd97c9030754d1ca2620d86ddc67d4a58f4ab47162a",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -829,6 +906,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 0,
       "command_hash": "e77dd8eb70450936b526750b4bc3b624ee02a5d99186200e68aa6e8607b06559",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -927,6 +1011,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "48dec61c5b1ca5729e4731d9806f47cf0b895ffd30fb276c599b132d68eb247b",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -1024,6 +1115,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "c3fc70286fa017592cd9d9d68aa187c9e397d8e3f3d44df1118ad1eb2d589e0d",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "408927b95a06194df6300efc4294a9c04b60e30d3afbfae77b96988841432182",
       "fallback_solves": 0,
@@ -1121,6 +1219,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "d12badcd8800ecb2abdc1623d2309cebc2b8fa5fefb5b69bf031fad619f9ee01",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1205,6 +1310,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "eae7313c8c6051d3365decfea443008ec8f6f28305bfc10921428675b04146c4",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1289,6 +1401,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "c30a522a35c940951f6489a12ad8b79747f638c0999a5156fcf9b68e6ea53a4d",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1379,6 +1498,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "f187218c713ea58e2a204bac5e211ea077875ddca272dd7e2fab04f2bf11a378",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1469,6 +1595,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 42,
       "command_hash": "30718489d943ce486eb49864d8dcb1bbae8c84e750b8553ed4303e910fefb7eb",
+      "cpsat_gain": {
+        "accepted": 6,
+        "max_window_revenue_usd": 15.0,
+        "p3": 0,
+        "revenue_usd": 36.68,
+        "windows": 48
+      },
       "cpsat_selected_solves": 6,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1562,6 +1695,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 41,
       "command_hash": "0a0b855bdf60c890e094fea9bfd6e4de9dc5a67e0062df864169f89b6f84320b",
+      "cpsat_gain": {
+        "accepted": 7,
+        "max_window_revenue_usd": 26.66,
+        "p3": 0,
+        "revenue_usd": 119.97,
+        "windows": 48
+      },
       "cpsat_selected_solves": 7,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1655,6 +1795,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "a1e54e271b80e6f9899c07a36294dfbc7d60347f46bce1ac541cee7089ec5e2d",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1739,6 +1886,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "80b898ac60439d3396a9bb35ce08e141170bc91b9624e07fd31c009a6cc78afd",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1823,6 +1977,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "1743ec27c362004f5ad5a134a6ea302e356ba176e35014171febe43675054512",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -1913,6 +2074,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "b39561eb42fae4688ef5a9cff8ee6ebb021e33abe17a2f0d3f4de5931deff46f",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2003,6 +2171,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 43,
       "command_hash": "ccc628da0fe2782dd132c450e570736a1de1bcee709714c31fe11c9b6a4ca261",
+      "cpsat_gain": {
+        "accepted": 5,
+        "max_window_revenue_usd": 13.33,
+        "p3": 0,
+        "revenue_usd": 48.32,
+        "windows": 48
+      },
       "cpsat_selected_solves": 5,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2096,6 +2271,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 46,
       "command_hash": "9e3c0070b9ea2ed8bdd5b214ff35d0d4ce1f8be445c3bf2ea178275964413566",
+      "cpsat_gain": {
+        "accepted": 2,
+        "max_window_revenue_usd": 13.33,
+        "p3": 0,
+        "revenue_usd": 24.99,
+        "windows": 48
+      },
       "cpsat_selected_solves": 2,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2189,6 +2371,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "ecb9a65f8c4e3567b4a12417aad77becaa50e50a3fb9256c24f4d4ba389b0ecc",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2273,6 +2462,13 @@
       "algorithm_version": "1.0",
       "baseline_guard_solves": 0,
       "command_hash": "d2d5bc5ce76eccac9f2a060bf09d8a528a18698123dd2ad985ed2c9ae24d1019",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2357,6 +2553,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "af8f5939ff0ff9691d14923fcdf325fddf0a56fe71db09fc7995502ae6f97198",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2447,6 +2650,13 @@
       "algorithm_version": "1.3",
       "baseline_guard_solves": 0,
       "command_hash": "a03f12bd04929e1ef5cbe177f512e86487a87e32186b800d2592a22a3cc83d36",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 0
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2537,6 +2747,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 47,
       "command_hash": "ea992ec3cf4e2aa4bed2c4c5ea3ea0667fb4bedff2c792e50b5c2125f092cf55",
+      "cpsat_gain": {
+        "accepted": 1,
+        "max_window_revenue_usd": 134.94,
+        "p3": 0,
+        "revenue_usd": 134.94,
+        "windows": 48
+      },
       "cpsat_selected_solves": 1,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,
@@ -2630,6 +2847,13 @@
       "algorithm_version": "1.7",
       "baseline_guard_solves": 48,
       "command_hash": "ecbaf94e5ed3cba3c141fa0c62593e25c5e7d907c32f98dfdf141a4f8b9dc3c7",
+      "cpsat_gain": {
+        "accepted": 0,
+        "max_window_revenue_usd": 0.0,
+        "p3": 0,
+        "revenue_usd": 0,
+        "windows": 48
+      },
       "cpsat_selected_solves": 0,
       "events_hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "fallback_solves": 0,

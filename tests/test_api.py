@@ -66,3 +66,12 @@ def test_api_rate_limit_and_busy_signal():
         ok += 1
     assert r.status_code == 429 and ok <= RATE_LIMITS["features"]
     assert c.get("/api/health").status_code == 200        # проверка живости не ограничивается
+
+
+def test_ai_answer_numbers_are_checked_as_values_not_substrings():
+    """Находка проверки 22.09: «15» считалось подтверждённым, если в фактах было «315»."""
+    from server.ai import _grounded
+    facts = {"p3": 315, "revenue_usd": 27352.2, "steps": 288}
+    assert _grounded("Срочных в срок 315, выручка 27352.2", facts)
+    assert not _grounded("Ниже резерва 15 аппарато-шагов", facts)
+    assert not _grounded("Выполнено 73 задания", facts)          # 73 нет в фактах, хотя есть 735 в числах

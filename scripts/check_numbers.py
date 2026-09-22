@@ -57,6 +57,12 @@ def claims(root=ROOT):
         a, b, c = (runs[k(s, "horizon-cpsat", goal)]["cpsat_selected_solves"] for s in ("P02_shift", "P03_energy", "P04_demand"))
         return f"{a}, {b} и {c}"
     out.append(("CRITERIA.md", f"CP-SAT принят в {accepted('priority')} из 48 перестроек (приоритет) и в {accepted('revenue')} (коммерция)"))
+    # Вклад решателя в деньгах: сумма превышения его плана над эвристикой на принятых окнах.
+    def gain(scenario, goal):
+        return usd(runs[k(scenario, "horizon-cpsat", goal)]["cpsat_gain"]["revenue_usd"])
+    contribution = (f"вклад принятых планов по оценке окна — {gain('P02_shift', 'priority')} на P02, "
+                    f"{gain('P03_energy', 'priority')} на P03 и {gain('P04_demand', 'priority')} на P04 (приоритет)")
+    out += [("README.md", contribution), ("CRITERIA.md", contribution)]
     n = len(runs)
     out.append(("README.md", f"{n} из {n} прогонов повторены моделью организаторов"))
     out.append(("CRITERIA.md", f"{n} из {n} прогонов повторены моделью с тем же итогом"))
@@ -107,8 +113,20 @@ def check(root=ROOT):
     return errors, count
 
 
+def write_claims(root=ROOT):
+    """results/claims.json — те же утверждения в машиночитаемом виде: фраза, файл, найдена ли.
+    Проверяющему (в том числе автоматическому) не нужно верить тексту: каждая строка сверяема."""
+    rows = [{"file": name, "claim": phrase, "found": phrase in (root / name).read_text(encoding="utf-8")}
+            for name, phrase in claims(root)]
+    path = root / "results" / "claims.json"
+    path.write_text(json.dumps({"schema_version": 1, "source": "results/*.json", "claims": rows},
+                               ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return rows
+
+
 if __name__ == "__main__":
     errors, count = check()
+    write_claims()
     for error in errors:
         print(error)
     print(f"Проверено числовых утверждений: {count}; ошибок: {len(errors)}")

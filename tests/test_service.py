@@ -280,4 +280,6 @@ def test_record_id_is_validated():
     for bad in ("../../etc/passwd", "a" * 65, "", "прогон 1"):
         with pytest.raises(InputError, match="дентификатор"):
             service.view({**run, "id": bad})
-    assert service.view({**run, "id": "run-1_v1-3"})["step"] == 0
+    # Копии прежних версий в браузере называются «<id>-v1.3» — точка допустима.
+    for good in ("run-1_v1-3", "b07e6e5cbb4048a6-v1.3"):
+        assert service.view({**run, "id": good})["step"] == 0
