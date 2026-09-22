@@ -1,10 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm --prefix web ci && npm --prefix web run build",
+  "outputDirectory": "web/dist",
   "functions": {
-    "server/main.py": {
+    "api/index.py": {
       "maxDuration": 300,
-      "includeFiles": "{data/**,model/**,core/**,examples/**,web/dist/**,results/summary.json,results/extended_summary.json,results/timings.json,results/research.json}"
+      "includeFiles": "{data/**,model/**,core/**,server/**,examples/**,results/summary.json,results/extended_summary.json,results/timings.json,results/research.json,results/demo_losses.json}"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
 }
