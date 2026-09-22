@@ -133,7 +133,7 @@ function FrontierView({ r }: { r: Frontier }) {
         выручка {sign(hi.revenue_usd - lo.revenue_usd, usd)}{perJob > 0 ? " — компромисса нет, выигрывают оба показателя" : ""}.
       </p>
       <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Компромисс между заданиями P3 и выручкой">
-        {front.length > 1 && <polyline points={front.map((p) => `${x(p.p3_done)},${y(p.revenue_usd)}`).join(" ")} fill="none" stroke="#9281f7" strokeWidth="1.5" />}
+        {front.length > 1 && <polyline points={front.map((p) => `${x(p.p3_done)},${y(p.revenue_usd)}`).join(" ")} fill="none" stroke="#37c4b3" strokeWidth="1.5" />}
         {[...groups.values()].map((ps) => {
           const p = ps[0], b = ps.map((q) => q.p3_bonus_usd);
           return (

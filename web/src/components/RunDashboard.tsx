@@ -159,10 +159,14 @@ export default function RunDashboard({ view: v, jobs, board, explain, initialSte
 }
 
 function Kpi({ label, value, sub }: { label: ReactNode; value: string; sub?: ReactNode }) {
+  // Подсветка только при изменении значения, не при первом показе.
+  const prev = useRef(value);
+  const [flash, setFlash] = useState(0);
+  useEffect(() => { if (prev.current !== value) { prev.current = value; setFlash((n) => n + 1); } }, [value]);
   return (
     <div className="kpi">
       <div className="kpi-label">{label}</div>
-      <div className="kpi-value mono">{value}</div>
+      <div key={flash} className={`kpi-value mono${flash ? " changed" : ""}`}>{value}</div>
       {sub && <div className="kpi-sub muted">{sub}</div>}
     </div>
   );

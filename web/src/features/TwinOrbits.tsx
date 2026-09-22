@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Pause, Play } from "@phosphor-icons/react";
 import { api } from "../api/client";
 import type { RunRecord, Timeline } from "../api/types";
 import OrbitView from "../components/OrbitView";
@@ -55,7 +56,7 @@ export default function TwinOrbits({ a, b, forkStep }: { a: RunRecord; b: RunRec
       </div>
       <div className="orbit-controls">
         <button className="btn btn-play" onClick={() => { if (k >= last) setK(forkStep ?? 0); setPlaying(!playing); }}>
-          {playing ? "❚❚  Пауза" : "▶  Проиграть обе"}
+          {playing ? <><Pause weight="fill" /> Пауза</> : <><Play weight="fill" /> Проиграть обе</>}
         </button>
         <div className="timeline">
           <input type="range" min={0} max={last} value={Math.min(k, last)} onChange={(e) => { setPlaying(false); setK(+e.target.value); }}

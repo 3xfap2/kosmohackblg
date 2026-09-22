@@ -34,7 +34,7 @@ export default function Landing() {
           <h1 className="rise rise-2">Смена из 48 спутников —<br /><em>под контролем одного оператора</em></h1>
           <p className="lead rise rise-3">
             Сервис сам распределяет задания между спутниками, следит за зарядом батарей и окнами связи, перестраивает
-            план при отказах и объясняет каждую потерю — так, чтобы оператор видел цену решения до того, как его принять.
+            план при отказах и объясняет каждую потерю, чтобы оператор видел цену решения до того, как его принять.
           </p>
           <div className="cta rise rise-4">
             <Link className="btn btn-primary btn-lg" to="/console">Открыть демо-смену <span className="arrow">→</span></Link>
@@ -126,9 +126,9 @@ export default function Landing() {
           <span className="shot-cta btn btn-primary">Открыть демо-смену <span className="arrow">→</span></span>
         </Link>
         <div className="grid3 small-cards">
-          <div className="card spot feature"><h3>Рассказ</h3><p className="muted">Нажмите «✦ Рассказ» — смена проиграется с подписями ключевых моментов.</p></div>
-          <div className="card spot feature"><h3>Почему?</h3><p className="muted">Каждая потеря — с причиной; невыполнимость — с доказательством.</p></div>
-          <div className="card spot feature"><h3>Что если</h3><p className="muted">Отключите спутник прямо с карты — увидите цену до того, как решение принято.</p></div>
+          <div className="card spot feature"><h3>Рассказ</h3><p className="muted">Нажмите «Рассказ», и смена проиграется с подписями ключевых моментов.</p></div>
+          <div className="card spot feature"><h3>Почему?</h3><p className="muted">У каждой потери есть причина, у невыполнимости есть доказательство.</p></div>
+          <div className="card spot feature"><h3>Что если</h3><p className="muted">Отключите спутник прямо с карты и увидите цену до того, как решение принято.</p></div>
         </div>
       </section>
 

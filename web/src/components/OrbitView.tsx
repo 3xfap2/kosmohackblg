@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, FilmStrip, LinkSimple, Pause, Play, Stop } from "@phosphor-icons/react";
 import type { EventRecord, Passport } from "../api/types";
 import type { Board, Cell } from "../lib/cells";
 import { REASON, clock } from "../format";
@@ -475,11 +476,11 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
 
       {!compact && <><div className="orbit-controls">
         <button className="btn btn-play" disabled={last === 0} onClick={() => { if (step >= last) onStep(0); setStoryMode(false); setPlaying(!playing); }}>
-          {playing && !storyMode ? "❚❚  Пауза" : "▶  Проиграть смену"}
+          {playing && !storyMode ? <><Pause weight="fill" /> Пауза</> : <><Play weight="fill" /> Проиграть смену</>}
         </button>
         <button className={"btn btn-story" + (storyMode ? " on" : "")} disabled={last === 0}
           onClick={() => { if (storyMode) { setStoryMode(false); setPlaying(false); } else { onStep(0); setStoryMode(true); setPlaying(true); } }}>
-          {storyMode ? "■  Стоп" : "✦  Рассказ"}
+          {storyMode ? <><Stop weight="fill" /> Стоп</> : <><FilmStrip /> Рассказ</>}
         </button>
         <div className="timeline">
           <input type="range" min={0} max={last} value={k} onChange={(e) => { setPlaying(false); onStep(+e.target.value); }}
@@ -492,7 +493,7 @@ export default function OrbitView({ board, events, step, onStep, selected, onSel
           <button className="btn btn-share" onClick={async () => {
             const url = shareUrl(k, selected)!;
             try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { window.prompt("Ссылка на момент", url); }
-          }}>{copied ? "Скопировано ✓" : "🔗 Ссылка на момент"}</button>
+          }}>{copied ? <><Check /> Скопировано</> : <><LinkSimple /> Ссылка на момент</>}</button>
         )}
         <div className="speed">
           {[1, 4, 12].map((s) => (
@@ -516,7 +517,7 @@ function Spark({ cells }: { cells: Cell[] }) {
       <line x1={0} x2={W} y1={y(30)} y2={y(30)} stroke="#f5c451" strokeOpacity="0.5" strokeDasharray="3 3" />
       <path d={`${d}L${W},${H}L0,${H}Z`} fill="url(#sg)" />
       <path d={d} fill="none" stroke="#dfe6ff" strokeWidth="1.4" />
-      <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#b4a4ff" stopOpacity="0.28" /><stop offset="1" stopColor="#b4a4ff" stopOpacity="0" /></linearGradient></defs>
+      <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#37c4b3" stopOpacity="0.22" /><stop offset="1" stopColor="#37c4b3" stopOpacity="0" /></linearGradient></defs>
     </svg>
   );
 }

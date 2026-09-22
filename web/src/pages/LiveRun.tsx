@@ -57,16 +57,20 @@ export default function LiveRun() {
       setRun(r); setTarget(r.steps_executed + 12);   // уточняется по длине смены после загрузки вида
       try { await refresh(r); } catch (e) {
         if (!isStaleVersion(e)) { setError((e as Error).message); return; }
-        // Смена рассчитана прежней версией алгоритма — пересчитываем автоматически с теми же входными данными.
+        // Прежняя версия алгоритма или подпись другого ключа сервера — пересчитываем автоматически с теми же входными данными.
+        const resigned = /Подпись записи/.test(String((e as Error)?.message ?? e));
         try {
-          setRebuilding("Смена рассчитана прежней версией алгоритма — пересчитываем текущей…");
+          setRebuilding(resigned ? "Запись подписана другим ключом сервера — пересчитываем…" : "Смена рассчитана прежней версией алгоритма — пересчитываем текущей…");
           const res = await rebuildRun(r, (step) => setRebuilding(`Пересчёт текущей версией алгоритма: шаг ${step} из ${r.steps_executed}`));
           // Прежний расчёт не теряется: копия под своим id («Мои смены», можно выгрузить и повторить моделью).
-          await store.save({ ...r, id: `${r.id}-v${r.run_metadata.version}` });
+          // Запись с чужой подписью сервер не примет, копию не храним.
+          if (!resigned) await store.save({ ...r, id: `${r.id}-v${r.run_metadata.version}` });
           await store.save(res.run);
           setRun(res.run);
           await refresh(res.run, res.view);
-          setNotice(`Смена пересчитана текущей версией алгоритма (${res.run.run_metadata.version}): тот же сценарий, цель и сообщения на тех же шагах, до ${clock(r.steps_executed)}. Итог может отличаться от прежней версии; прежний расчёт сохранён копией в «Моих сменах».`);
+          setNotice(resigned
+            ? `Смена пересчитана заново (ключ подписи сервера сменился): тот же сценарий, цель и сообщения на тех же шагах, до ${clock(r.steps_executed)}.`
+            : `Смена пересчитана текущей версией алгоритма (${res.run.run_metadata.version}): тот же сценарий, цель и сообщения на тех же шагах, до ${clock(r.steps_executed)}. Итог может отличаться от прежней версии; прежний расчёт сохранён копией в «Моих сменах».`);
         } catch (e2) { setError((e2 as Error).message); } finally { setRebuilding(null); }
       }
     });

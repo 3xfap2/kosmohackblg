@@ -205,7 +205,7 @@ function Help({ onClose, onEvents }: { onClose: () => void; onEvents: () => void
         <header><b>С чего начать</b><button className="icon-btn" onClick={onClose} aria-label="Закрыть">×</button></header>
         <div className="modal-body">
           <div className="help-steps">
-            <button onClick={() => go("map")}><b>1 · Карта</b><span>Нажмите «✦ Рассказ» — смена проиграется с подписями ключевых моментов.</span></button>
+            <button onClick={() => go("map")}><b>1 · Карта</b><span>Нажмите «Рассказ», и смена проиграется с подписями ключевых моментов.</span></button>
             <button onClick={() => go("jobs")}><b>2 · Потери</b><span>Нажмите на сорванное задание — «Почему?» объяснит причину.</span></button>
             <button onClick={onEvents}><b>3 · Событие</b><span>Отправьте сообщение и нажмите «Оценить последствия» — увидите цену до решения.</span></button>
           </div>

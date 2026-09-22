@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { Crosshair, Diamond, Lightning } from "@phosphor-icons/react";
 import { api } from "../api/client";
 import type { Forecast, RunRecord } from "../api/types";
 import { clock } from "../format";
 
 // F4: прогноз на 2 часа — прогон текущего планировщика вперёд, не факт.
-const ICON = { energy: "⚡", p3: "◆", calibration: "◎" } as const;
+const ICON = { energy: <Lightning weight="fill" />, p3: <Diamond weight="fill" />, calibration: <Crosshair /> } as const;
 
 export default function ForecastCard({ run, data, total }: { run: RunRecord; data?: Forecast | null; total?: number }) {
   const [own, setF] = useState<Forecast | null>(null);

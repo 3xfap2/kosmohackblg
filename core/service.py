@@ -161,7 +161,7 @@ def _restore(record):
         if not isinstance(record["id"], str) or not record["id"]:
             raise ValueError("Нет идентификатора запуска")
         if not hmac.compare_digest(str(record.get("signature", "")), _signature(record)):
-            raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или подписана другим ключом сервера — начните новый расчёт")
+            raise ValueError("Подпись записи не совпадает: запись изменена вне сервиса или подписана другим ключом сервера — смена будет пересчитана")
         s = _source(record["scenario"])
         if digest(s) != record["scenario_hash"]:
             raise ValueError("Исходный сценарий изменился: хеш не совпадает")

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChatCircleDots, X } from "@phosphor-icons/react";
 import { api } from "../api/client";
 import type { RunRecord } from "../api/types";
 
@@ -47,7 +48,7 @@ export default function ChatWidget({ run }: { run: RunRecord }) {
   return (
     <>
       <button className={"chat-fab" + (open ? " open" : "")} onClick={() => setOpen(!open)} aria-label="Ассистент смены">
-        <span className="chat-fab-icon" aria-hidden>{open ? "×" : "✦"}</span>
+        <span className="chat-fab-icon" aria-hidden>{open ? <X /> : <ChatCircleDots />}</span>
         {!open && <span className="chat-fab-label">Ассистент</span>}
       </button>
       <div className={"chat" + (open ? " open" : "")} role="dialog" aria-label="Ассистент смены" aria-hidden={!open}>
